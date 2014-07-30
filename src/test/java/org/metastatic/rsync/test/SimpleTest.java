@@ -174,7 +174,7 @@ public class SimpleTest implements MatcherListener
     {
         StringBuffer corpus = new StringBuffer(new String(b, "ISO-8859-1"));
         int nmuts = 1 + rand.nextInt(30);
-        logger.info("\t" + nmuts + " mutations");
+        logger.fine("\t" + nmuts + " mutations");
         while (--nmuts > 0)
         {
             int from_off = rand.nextInt(corpus.length());
@@ -186,19 +186,19 @@ public class SimpleTest implements MatcherListener
             switch (rand.nextInt(3))
             {
                 case 0:
-                    logger.info("\tcopy and overwrite (" + from_off + ", "
+                    logger.fine("\tcopy and overwrite (" + from_off + ", "
                                 + from_len + ") -> (" + to_off + ", " + to_len + ")");
                     corpus.replace(to_off, to_off + to_len,
                             corpus.substring(from_off, from_off + from_len));
                     break;
                 case 1:
-                    logger.info("\tcopy and insert (" + from_off + ", "
+                    logger.fine("\tcopy and insert (" + from_off + ", "
                                 + from_len + ") -> (" + to_off + ", " + to_len + ")");
                     corpus.insert(to_off,
                             corpus.substring(from_off, from_off + from_len));
                     break;
                 case 2:
-                    logger.info("\tdelete (" + from_off + ", " + from_len + ")");
+                    logger.fine("\tdelete (" + from_off + ", " + from_len + ")");
                     corpus.delete(from_off, from_off + from_len);
                     break;
             }
