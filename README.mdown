@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/csm/Jarsync.svg?branch=master)](https://travis-ci.org/csm/Jarsync)
+
 # Jarsync -- rsync in Java
 
 This is a simple Java API that implements the basics of the [rsync](http://rsync.samba.org) algorithm.
