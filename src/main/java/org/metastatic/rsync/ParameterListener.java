@@ -50,25 +50,26 @@ package org.metastatic.rsync;
  *
  * @version $Revision$
  */
-public interface ParameterListener extends java.util.EventListener {
+public interface ParameterListener extends java.util.EventListener
+{
 
-   /**
-    * Begin a named section. This method will be called on every new
-    * section definition.
-    *
-    * @param sectionName The new section's name.
-    */
-   void beginSection(String sectionName);
+    /**
+     * Begin a named section. This method will be called on every new
+     * section definition.
+     *
+     * @param sectionName The new section's name.
+     */
+    void beginSection(String sectionName);
 
-   /**
-    * Set a parameter. This method may be called prior to the first call
-    * to {@link #beginSection}, if there are global options. If this
-    * method is called after a call to {@link
-    * #beginSection(java.lang.String)}, this parameter belongs to that
-    * section.
-    *
-    * @param name  The parameter's name.
-    * @param value The parameter's value.
-    */
-   void setParameter(String name, String value);
+    /**
+     * Set a parameter. This method may be called prior to the first call
+     * to {@link #beginSection}, if there are global options. If this
+     * method is called after a call to {@link
+     * #beginSection(java.lang.String)}, this parameter belongs to that
+     * section.
+     *
+     * @param name  The parameter's name.
+     * @param value The parameter's value.
+     */
+    void setParameter(String name, String value);
 }

@@ -48,24 +48,25 @@ package org.metastatic.rsync;
  * of bytes and an offset, or (2) a pair of offsets, one old and one
  * new.
  *
+ * @version $Revision$
  * @see DataBlock
  * @see Offsets
- * @version $Revision$
  */
-public interface Delta {
-   /**
-    * The size of the block of data this class represents.
-    *
-    * @since 1.1
-    * @return The size of the block of data this class represents.
-    */
-   int getBlockLength();
+public interface Delta
+{
+    /**
+     * The size of the block of data this class represents.
+     *
+     * @return The size of the block of data this class represents.
+     * @since 1.1
+     */
+    int getBlockLength();
 
-   /**
-    * Get the offset at which this Delta should be written.
-    *
-    * @since 1.2
-    * @return The write offset.
-    */
-   long getWriteOffset();
+    /**
+     * Get the offset at which this Delta should be written.
+     *
+     * @return The write offset.
+     * @since 1.2
+     */
+    long getWriteOffset();
 }

@@ -55,7 +55,7 @@ import java.security.NoSuchAlgorithmException;
  * A Configuration is a mere collection of objects and values that
  * compose a particular configuration for the algorithm, for example the
  * message digest that computes the strong checksum.
- *
+ * <p/>
  * <p>Usage of a Configuration involves setting the member fields of
  * this object to thier appropriate values; thus, it is up to the
  * programmer to specify the {@link #strongSum}, {@link #weakSum},
@@ -65,122 +65,133 @@ import java.security.NoSuchAlgorithmException;
  * @author Casey Marshall
  * @version $Revision$
  */
-public class Configuration implements Cloneable, java.io.Serializable {
+public class Configuration implements Cloneable, java.io.Serializable
+{
 
-   // Constants and variables.
-   // ------------------------------------------------------------------------
+    // Constants and variables.
+    // ------------------------------------------------------------------------
 
-   /**
-    * The default block size.
-    */
-   public static final int BLOCK_LENGTH = 700;
+    /**
+     * The default block size.
+     */
+    public static final int BLOCK_LENGTH = 700;
 
-   /**
-    * The default chunk size.
-    */
-   public static final int CHUNK_SIZE = 32768;
+    /**
+     * The default chunk size.
+     */
+    public static final int CHUNK_SIZE = 32768;
 
-   /**
-    * The message digest that computes the stronger checksum.
-    */
-   public transient MessageDigest strongSum;
+    /**
+     * The message digest that computes the stronger checksum.
+     */
+    public transient MessageDigest strongSum;
 
-   /**
-    * The rolling checksum.
-    */
-   public transient RollingChecksum weakSum;
+    /**
+     * The rolling checksum.
+     */
+    public transient RollingChecksum weakSum;
 
-   /**
-    * The length of blocks to checksum.
-    */
-   public int blockLength;
+    /**
+     * The length of blocks to checksum.
+     */
+    public int blockLength;
 
-   /**
-    * The effective length of the strong sum.
-    */
-   public int strongSumLength;
+    /**
+     * The effective length of the strong sum.
+     */
+    public int strongSumLength;
 
-   /**
-    * Whether or not to do run-length encoding when making Deltas.
-    */
-   public boolean doRunLength;
+    /**
+     * Whether or not to do run-length encoding when making Deltas.
+     */
+    public boolean doRunLength;
 
-   /**
-    * The seed for the checksum, to perturb the strong checksum and help
-    * avoid collisions in plain rsync (or in similar applicaitons).
-    */
-   public byte[] checksumSeed;
+    /**
+     * The seed for the checksum, to perturb the strong checksum and help
+     * avoid collisions in plain rsync (or in similar applicaitons).
+     */
+    public byte[] checksumSeed;
 
-   /**
-    * The maximum size of byte arrays to create, when they are needed.
-    * This vale defaults to 32 kilobytes.
-    */
-   public int chunkSize;
+    /**
+     * The maximum size of byte arrays to create, when they are needed.
+     * This vale defaults to 32 kilobytes.
+     */
+    public int chunkSize;
 
-   // Constructors.
-   // ------------------------------------------------------------------------
+    // Constructors.
+    // ------------------------------------------------------------------------
 
-   public Configuration() {
-      blockLength = BLOCK_LENGTH;
-      chunkSize = CHUNK_SIZE;
-   }
+    public Configuration()
+    {
+        blockLength = BLOCK_LENGTH;
+        chunkSize = CHUNK_SIZE;
+    }
 
-   /**
-    * Private copying constructor.
-    */
-   private Configuration(Configuration that)
-   {
-      try {
-         this.strongSum = (MessageDigest) (that.strongSum != null
-            ? that.strongSum.clone()
-            : null);
-      } catch (CloneNotSupportedException cnse) {
-         try {
-            this.strongSum = MessageDigest.getInstance(
-               that.strongSum.getAlgorithm());
-         } catch (NoSuchAlgorithmException nsae) {
-            // Fucked up situation. We die now.
-            throw new Error(nsae);
-         }
-      }
-      this.weakSum = (RollingChecksum) (that.weakSum != null
-         ? that.weakSum.clone()
-         : null);
-      this.blockLength = that.blockLength;
-      this.doRunLength = that.doRunLength;
-      this.strongSumLength = that.strongSumLength;
-      this.checksumSeed = (byte[]) (that.checksumSeed != null
-         ? that.checksumSeed.clone()
-         : null);
-      this.chunkSize = that.chunkSize;
-   }
+    /**
+     * Private copying constructor.
+     */
+    private Configuration(Configuration that)
+    {
+        try
+        {
+            this.strongSum = (MessageDigest) (that.strongSum != null
+                    ? that.strongSum.clone()
+                    : null);
+        } catch (CloneNotSupportedException cnse)
+        {
+            try
+            {
+                this.strongSum = MessageDigest.getInstance(
+                        that.strongSum.getAlgorithm());
+            } catch (NoSuchAlgorithmException nsae)
+            {
+                // Fucked up situation. We die now.
+                throw new Error(nsae);
+            }
+        }
+        this.weakSum = (RollingChecksum) (that.weakSum != null
+                ? that.weakSum.clone()
+                : null);
+        this.blockLength = that.blockLength;
+        this.doRunLength = that.doRunLength;
+        this.strongSumLength = that.strongSumLength;
+        this.checksumSeed = (byte[]) (that.checksumSeed != null
+                ? that.checksumSeed.clone()
+                : null);
+        this.chunkSize = that.chunkSize;
+    }
 
-   // Instance methods.
-   // -----------------------------------------------------------------------
+    // Instance methods.
+    // -----------------------------------------------------------------------
 
-   public Object clone() {
-      return new Configuration(this);
-   }
+    public Object clone()
+    {
+        return new Configuration(this);
+    }
 
-   // Serialization methods.
-   // -----------------------------------------------------------------------
+    // Serialization methods.
+    // -----------------------------------------------------------------------
 
-   private void writeObject(ObjectOutputStream out) throws IOException {
-      out.defaultWriteObject();
-      out.writeUTF(strongSum != null ? strongSum.getAlgorithm() : "NONE");
-   }
+    private void writeObject(ObjectOutputStream out) throws IOException
+    {
+        out.defaultWriteObject();
+        out.writeUTF(strongSum != null ? strongSum.getAlgorithm() : "NONE");
+    }
 
-   private void readObject(ObjectInputStream in)
-      throws IOException, ClassNotFoundException
-   {
-      in.defaultReadObject();
-      String s = in.readUTF();
-      if (!s.equals("NONE")) {
-         try {
-            strongSum = MessageDigest.getInstance(s);
-         } catch (NoSuchAlgorithmException nsae) {
-            throw new java.io.InvalidObjectException(nsae.getMessage());
-         }
-      }
-   }
+    private void readObject(ObjectInputStream in)
+            throws IOException, ClassNotFoundException
+    {
+        in.defaultReadObject();
+        String s = in.readUTF();
+        if (!s.equals("NONE"))
+        {
+            try
+            {
+                strongSum = MessageDigest.getInstance(s);
+            } catch (NoSuchAlgorithmException nsae)
+            {
+                throw new java.io.InvalidObjectException(nsae.getMessage());
+            }
+        }
+    }
 }

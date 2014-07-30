@@ -43,19 +43,22 @@
 
 package org.metastatic.rsync;
 
-public class MatcherEvent extends java.util.EventObject {
+public class MatcherEvent extends java.util.EventObject
+{
 
-   // Constructor.
-   // -----------------------------------------------------------------------
+    // Constructor.
+    // -----------------------------------------------------------------------
 
-   public MatcherEvent(Delta delta) {
-      super(delta);
-   }
+    public MatcherEvent(Delta delta)
+    {
+        super(delta);
+    }
 
-   // Instance methods.
-   // -----------------------------------------------------------------------
+    // Instance methods.
+    // -----------------------------------------------------------------------
 
-   public Delta getDelta() {
-      return (Delta) source;
-   }
+    public Delta getDelta()
+    {
+        return (Delta) source;
+    }
 }

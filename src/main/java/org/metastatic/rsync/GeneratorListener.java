@@ -51,12 +51,13 @@ import java.util.EventListener;
  *
  * @version $Revision$
  */
-public interface GeneratorListener extends EventListener {
+public interface GeneratorListener extends EventListener
+{
 
-   /**
-    * Update with a single, new checksum pair.
-    *
-    * @param event The event containing the next checksum pair.
-    */
-   void update(GeneratorEvent event) throws ListenerException;
+    /**
+     * Update with a single, new checksum pair.
+     *
+     * @param event The event containing the next checksum pair.
+     */
+    void update(GeneratorEvent event) throws ListenerException;
 }

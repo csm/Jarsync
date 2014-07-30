@@ -50,14 +50,17 @@ package org.metastatic.rsync;
  *
  * @version $Revision$
  */
-public class ParameterException extends java.io.IOException {
+public class ParameterException extends java.io.IOException
+{
 
-   // Trivial subclass.
-   public ParameterException() {
-      super();
-   }
-   
-   public ParameterException(String msg) {
-      super(msg);
-   }
+    // Trivial subclass.
+    public ParameterException()
+    {
+        super();
+    }
+
+    public ParameterException(String msg)
+    {
+        super(msg);
+    }
 }

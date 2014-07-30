@@ -62,7 +62,7 @@ public final class Matcher {
    // -----------------------------------------------------------------
 
    /** The list of deltas being built. */
-   protected final List deltas;
+   protected final List<Delta> deltas;
 
    /** The underlying matcher stream. */
    protected final MatcherStream matcher;
@@ -79,7 +79,7 @@ public final class Matcher {
     * @param config The {@link Configuration} for this Matcher.
     */
    public Matcher(Configuration config) {
-      deltas = new LinkedList();
+      deltas = new LinkedList<Delta>();
       matcher = new MatcherStream(config);
       matcher.addListener(new Callback(deltas));
       chunkSize = config.chunkSize;
@@ -93,10 +93,9 @@ public final class Matcher {
     *
     * @param sums The checksums to search for.
     * @param buf  The data buffer to search.
-    * @param baseOffset The offset from whence <code>buf</code> came.
     * @return A collection of {@link Delta}s derived from this search.
     */
-   public List hashSearch(List sums, byte[] buf) {
+   public List<Delta> hashSearch(List<ChecksumPair> sums, byte[] buf) {
       return hashSearch(sums, buf, 0, buf.length);
    }
 
@@ -107,10 +106,9 @@ public final class Matcher {
     * @param buf  The data buffer to search.
     * @param off  The offset in <code>buf</code> to begin.
     * @param len  The number of bytes to search from <code>buf</code>.
-    * @param baseOffset The offset from whence <code>buf</code> came.
     * @return A collection of {@link Delta}s derived from this search.
     */
-   public List hashSearch(List sums, byte[] buf, int off, int len) {
+   public List<Delta> hashSearch(List<ChecksumPair> sums, byte[] buf, int off, int len) {
       deltas.clear();
       matcher.reset();
       matcher.setChecksums(sums);
@@ -119,7 +117,7 @@ public final class Matcher {
          matcher.doFinal();
       } catch (ListenerException shouldNotHappen) {
       }
-      return new LinkedList(deltas);
+      return new LinkedList<Delta>(deltas);
    }
 
    /**
@@ -130,7 +128,7 @@ public final class Matcher {
     * @return A list of deltas derived from this search.
     * @throws IOException If <i>filename</i> cannot be read.
     */
-   public List hashSearch(List sums, String filename) throws IOException {
+   public List<Delta> hashSearch(List sums, String filename) throws IOException {
       return hashSearch(sums, new FileInputStream(filename));
    }
 
@@ -142,19 +140,19 @@ public final class Matcher {
     * @return A list of {@link Delta}s derived from this search.
     * @throws IOException If <i>f</i> cannot be read.
     */
-   public List hashSearch(List sums, File f) throws IOException {
+   public List<Delta> hashSearch(List<ChecksumPair> sums, File f) throws IOException {
       return hashSearch(sums, new FileInputStream(f));
    }
 
    /**
     * Search an input stream.
     *
-    * @param m  The {@link TwoKeyMap} to search.
+    * @param sums  The checksums to search.
     * @param in The input stream to search.
     * @return A collection of {@link Delta}s derived from this search.
     * @throws IOException If an exception occurs while reading.
     */
-   public List hashSearch(List sums, InputStream in) throws IOException {
+   public List<Delta> hashSearch(List<ChecksumPair> sums, InputStream in) throws IOException {
       deltas.clear();
       matcher.reset();
       matcher.setChecksums(sums);
@@ -166,7 +164,7 @@ public final class Matcher {
          matcher.doFinal();
       } catch (ListenerException shouldNeverHappen) {
       }
-      return new LinkedList(deltas);
+      return new LinkedList<Delta>(deltas);
    }
 
    // Inner classes.
@@ -181,12 +179,12 @@ public final class Matcher {
       // Fields.
       // --------------------------------------------------------------------
 
-      private final List deltas;
+      private final List<Delta> deltas;
 
       // Constructors.
       // --------------------------------------------------------------------
 
-      Callback(List deltas) {
+      Callback(List<Delta> deltas) {
          this.deltas = deltas;
       }
 

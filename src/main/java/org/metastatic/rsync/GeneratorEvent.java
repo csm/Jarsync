@@ -52,29 +52,32 @@ import java.util.EventObject;
  * @see GeneratorListener
  * @see GeneratorStream
  */
-public class GeneratorEvent extends EventObject {
+public class GeneratorEvent extends EventObject
+{
 
-   // Constructors.
-   // -----------------------------------------------------------------------
+    // Constructors.
+    // -----------------------------------------------------------------------
 
-   /**
-    * Create a new generator event.
-    *
-    * @param pair The checksum pair.
-    */
-   public GeneratorEvent(ChecksumPair pair) {
-      super(pair);
-   }
+    /**
+     * Create a new generator event.
+     *
+     * @param pair The checksum pair.
+     */
+    public GeneratorEvent(ChecksumPair pair)
+    {
+        super(pair);
+    }
 
-   // Instance methods.
-   // -----------------------------------------------------------------------
+    // Instance methods.
+    // -----------------------------------------------------------------------
 
-   /**
-    * Returns the source of this event, already cast to a ChecksumPair.
-    *
-    * @return The checksum pair.
-    */
-   public ChecksumPair getChecksumPair() {
-      return (ChecksumPair) source;
-   }
+    /**
+     * Returns the source of this event, already cast to a ChecksumPair.
+     *
+     * @return The checksum pair.
+     */
+    public ChecksumPair getChecksumPair()
+    {
+        return (ChecksumPair) source;
+    }
 }

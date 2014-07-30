@@ -47,12 +47,14 @@ package org.metastatic.rsync;
  * This provider implements the MD4 message digest, and is provided to
  * ensure that MD4 is available.
  */
-public final class JarsyncProvider extends java.security.Provider {
-   public JarsyncProvider() {
-      super("JARSYNC", version.VERSION_DOUBLE,
-            "Jarsync provider; implementing MD4, BrokenMD4");
+public final class JarsyncProvider extends java.security.Provider
+{
+    public JarsyncProvider()
+    {
+        super("JARSYNC", org.metastatic.rsync.version.VERSION_DOUBLE,
+                "Jarsync provider; implementing MD4, BrokenMD4");
 
-      put("MessageDigest.MD4",       "org.metastatic.rsync.MD4");
-      put("MessageDigest.BrokenMD4", "org.metastatic.rsync.BrokenMD4");
-   }
+        put("MessageDigest.MD4", "org.metastatic.rsync.MD4");
+        put("MessageDigest.BrokenMD4", "org.metastatic.rsync.BrokenMD4");
+    }
 }

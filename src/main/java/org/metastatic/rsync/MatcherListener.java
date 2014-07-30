@@ -51,12 +51,13 @@ import java.util.EventListener;
  *
  * @version $Revision$
  */
-public interface MatcherListener extends EventListener {
+public interface MatcherListener extends EventListener
+{
 
-   /**
-    * Update with a single, new delta.
-    *
-    * @param event The next delta event.
-    */
-   void update(MatcherEvent event) throws ListenerException;
+    /**
+     * Update with a single, new delta.
+     *
+     * @param event The next delta event.
+     */
+    void update(MatcherEvent event) throws ListenerException;
 }

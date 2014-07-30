@@ -50,12 +50,13 @@ package org.metastatic.rsync;
  *
  * @version $Revision$
  */
-public interface RebuilderListener extends java.util.EventListener {
+public interface RebuilderListener extends java.util.EventListener
+{
 
-   /**
-    * Upate this listener with an event.
-    *
-    * @param event The event.
-    */
-   void update(RebuilderEvent event) throws ListenerException;
+    /**
+     * Upate this listener with an event.
+     *
+     * @param event The event.
+     */
+    void update(RebuilderEvent event) throws ListenerException;
 }
