@@ -1,0 +1,6 @@
+# Jarsync -- rsync in Java
+
+This is a simple Java API that implements the basics of the [rsync](http://rsync.samba.org) algorithm.
+
+This is still kind of a stub while we resurrect this twelve-year-old (!) project. Stay tuned, we might actually
+update this fully someday!
