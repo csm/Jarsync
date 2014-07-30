@@ -41,10 +41,22 @@ to do so, delete this exception statement from your version.  */
 
 package org.metastatic.rsync;
 
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * A "streaming" API for generating checksums. This class accepts incremental
+ * byte values of any size as input, and sends {@link org.metastatic.rsync.GeneratorEvent}
+ * objects to listeners as checksums are generated.
+ *
+ * <p>The general usage pattern:</p>
+ *
+ * <pre>GeneratorStream generator = new GeneratorStream(config);
+generator.addListener(your_listener);
+for (byte[] part : parts)
+   generator.update(part);
+generator.doFinal();</pre>
+ */
 public class GeneratorStream
 {
 
@@ -59,7 +71,7 @@ public class GeneratorStream
     /**
      * The list of {@link GeneratorListener}s.
      */
-    protected final List listeners;
+    protected final List<GeneratorListener> listeners;
 
     /**
      * The intermediate byte buffer.
@@ -82,7 +94,7 @@ public class GeneratorStream
     public GeneratorStream(Configuration config)
     {
         this.config = config;
-        this.listeners = new LinkedList();
+        this.listeners = new LinkedList<GeneratorListener>();
         buffer = new byte[config.blockLength];
         reset();
     }
@@ -135,11 +147,11 @@ public class GeneratorStream
         if (ndx == buffer.length)
         {
             ChecksumPair p = generateSum(buffer, 0, buffer.length);
-            for (Iterator it = listeners.listIterator(); it.hasNext(); )
+            for (GeneratorListener listener : listeners)
             {
                 try
                 {
-                    ((GeneratorListener) it.next()).update(new GeneratorEvent(p));
+                    listener.update(new GeneratorEvent(p));
                 } catch (ListenerException le)
                 {
                     if (exception != null)
@@ -179,11 +191,11 @@ public class GeneratorStream
             if (ndx == buffer.length)
             {
                 ChecksumPair p = generateSum(buffer, 0, buffer.length);
-                for (Object listener : listeners)
+                for (GeneratorListener listener : listeners)
                 {
                     try
                     {
-                        ((GeneratorListener) listener).update(new GeneratorEvent(p));
+                        listener.update(new GeneratorEvent(p));
                     } catch (ListenerException le)
                     {
                         if (exception != null)
@@ -224,11 +236,11 @@ public class GeneratorStream
         if (ndx > 0)
         {
             ChecksumPair p = generateSum(buffer, 0, ndx);
-            for (Iterator it = listeners.listIterator(); it.hasNext(); )
+            for (GeneratorListener listener : listeners)
             {
                 try
                 {
-                    ((GeneratorListener) it.next()).update(new GeneratorEvent(p));
+                    listener.update(new GeneratorEvent(p));
                 } catch (ListenerException le)
                 {
                     if (exception != null)

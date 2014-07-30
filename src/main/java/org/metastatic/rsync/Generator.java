@@ -52,9 +52,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Checksum generation methods.
- *
- * @version $Revision$
+ * A checksum generator. This class can take a byte array or an input stream,
+ * and will generate a list of {@link org.metastatic.rsync.ChecksumPair} objects
+ * for that data.
  */
 public class Generator
 {
@@ -88,7 +88,7 @@ public class Generator
      * generated from the array.
      * @see #generateSums(byte[], int, int, long)
      */
-    public List generateSums(byte[] buf)
+    public List<ChecksumPair> generateSums(byte[] buf)
     {
         return generateSums(buf, 0, buf.length, 0);
     }
@@ -104,7 +104,7 @@ public class Generator
      * generated from the array.
      * @see #generateSums(byte[], int, int, long)
      */
-    public List generateSums(byte[] buf, int off, int len)
+    public List<ChecksumPair> generateSums(byte[] buf, int off, int len)
     {
         return generateSums(buf, off, len, 0);
     }
@@ -120,7 +120,7 @@ public class Generator
      * generated from the array.
      * @see #generateSums(byte[], int, int, long)
      */
-    public List generateSums(byte[] buf, long baseOffset)
+    public List<ChecksumPair> generateSums(byte[] buf, long baseOffset)
     {
         return generateSums(buf, 0, buf.length, baseOffset);
     }
@@ -138,12 +138,12 @@ public class Generator
      * @return A {@link java.util.List} of {@link ChecksumPair}s
      * generated from the array.
      */
-    public List generateSums(byte[] buf, int off, int len, long baseOffset)
+    public List<ChecksumPair> generateSums(byte[] buf, int off, int len, long baseOffset)
     {
         int count = (len + (config.blockLength - 1)) / config.blockLength;
         int remainder = len % config.blockLength;
         int offset = off;
-        List sums = new ArrayList(count);
+        List<ChecksumPair> sums = new ArrayList<ChecksumPair>(count);
 
         for (int i = 0; i < count; i++)
         {
@@ -167,13 +167,13 @@ public class Generator
      * generated from the file.
      * @throws java.io.IOException if <code>f</code> cannot be read from.
      */
-    public List generateSums(File f) throws IOException
+    public List<ChecksumPair> generateSums(File f) throws IOException
     {
         long len = f.length();
         int count = (int) ((len + (config.blockLength + 1)) / config.blockLength);
         long offset = 0;
         FileInputStream fin = new FileInputStream(f);
-        List sums = new ArrayList(count);
+        List<ChecksumPair> sums = new ArrayList<ChecksumPair>(count);
         int n = (int) Math.min(len, config.blockLength);
         byte[] buf = new byte[n];
 
@@ -202,9 +202,9 @@ public class Generator
      * generated from the bytes read.
      * @throws java.io.IOException if reading fails.
      */
-    public List generateSums(InputStream in) throws IOException
+    public List<ChecksumPair> generateSums(InputStream in) throws IOException
     {
-        List sums = null;
+        List<ChecksumPair> sums = null;
         byte[] buf = new byte[config.blockLength * config.blockLength];
         long offset = 0;
         int len = 0;
