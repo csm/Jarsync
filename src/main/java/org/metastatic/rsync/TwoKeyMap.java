@@ -78,10 +78,30 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
     // Constants and variables.
     // -----------------------------------------------------------------
 
-    private final Map<Integer, Map<StrongKey, T>> map;
+    private final Map<Integer, Map<StrongKey, Value<T>>> map;
 
     // Inner classes.
     // -----------------------------------------------------------------
+
+    /**
+     */
+    private static class Value<T>
+    {
+        final Integer weakKey;
+        final T value;
+
+        Value(Integer weakKey, T value)
+        {
+            this.weakKey = weakKey;
+            this.value = value;
+        }
+
+        @Override
+        public String toString()
+        {
+            return String.format("Value(weakKey=%d, value=%s)", weakKey, value);
+        }
+    }
 
     /**
      * The stronger of the two keys in this {@link java.util.Map}. It is
@@ -267,7 +287,7 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
      */
     public TwoKeyMap()
     {
-        map = new HashMap<Integer, Map<StrongKey, T>>();
+        map = new HashMap<Integer, Map<StrongKey, Value<T>>>();
     }
 
     /**
@@ -326,14 +346,17 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
      */
     public T put(ChecksumPair key, T value)
     {
-        Map<StrongKey, T> m = map.get(key.getWeak() & 0xFFFF);
+        Map<StrongKey, Value<T>> m = map.get(key.getWeak() & 0xFFFF);
         if (m == null)
         {
-            m = new HashMap<StrongKey, T>();
+            m = new HashMap<StrongKey, Value<T>>();
             map.put(key.getWeak() & 0xFFFF, m);
         }
         StrongKey strongKey = new StrongKey(key.getStrong());
-        return m.put(strongKey, value);
+        Value<T> old = m.put(strongKey, new Value(key.getWeak(), value));
+        if (old != null)
+            return old.value;
+        return null;
     }
 
     /**
@@ -355,7 +378,7 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
         }
         else if (key instanceof ChecksumPair)
         {
-            Map<StrongKey, T> m = map.get(((ChecksumPair) key).getWeak() & 0xFFFF);
+            Map<StrongKey, Value<T>> m = map.get(((ChecksumPair) key).getWeak() & 0xFFFF);
             if (m != null)
             {
                 return m.containsKey(new StrongKey(((ChecksumPair) key).getStrong()));
@@ -376,9 +399,13 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
     public T get(Object key)
     {
         ChecksumPair pair = (ChecksumPair) key;
-        Map<StrongKey, T> m = map.get(pair.getWeak() & 0xFFFF);
+        Map<StrongKey, Value<T>> m = map.get(pair.getWeak() & 0xFFFF);
         if (m != null)
-            return m.get(new StrongKey(pair.getStrong()));
+        {
+            Value<T> value = m.get(new StrongKey(pair.getStrong()));
+            if (value != null)
+                return value.value;
+        }
         return null;
     }
 
@@ -401,10 +428,11 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
      */
     public boolean containsValue(Object value)
     {
-        for (Map<StrongKey, T> m : map.values())
+        for (Map<StrongKey, Value<T>> m : map.values())
         {
-            if (m.containsValue(value))
-                return true;
+            for (Value<T> v : m.values())
+                if (v.value.equals(value))
+                    return true;
         }
         return false;
     }
@@ -423,12 +451,12 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
             public Iterator<Entry<ChecksumPair, T>> iterator()
             {
                 Iterator<Iterator<Entry<ChecksumPair, T>>> it =
-                        Iterators.transform(map.entrySet().iterator(), new Function<Entry<Integer, Map<StrongKey, T>>, Iterator<Entry<ChecksumPair, T>>>()
+                        Iterators.transform(map.entrySet().iterator(), new Function<Entry<Integer, Map<StrongKey, Value<T>>>, Iterator<Entry<ChecksumPair, T>>>()
                         {
                             @Override
-                            public Iterator<Entry<ChecksumPair, T>> apply(final Entry<Integer, Map<StrongKey, T>> input)
+                            public Iterator<Entry<ChecksumPair, T>> apply(final Entry<Integer, Map<StrongKey, Value<T>>> input)
                             {
-                                final Iterator<Entry<StrongKey, T>> it = input.getValue().entrySet().iterator();
+                                final Iterator<Entry<StrongKey, Value<T>>> it = input.getValue().entrySet().iterator();
                                 return new Iterator<Entry<ChecksumPair, T>>()
                                 {
                                     @Override
@@ -440,8 +468,8 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
                                     @Override
                                     public Entry<ChecksumPair, T> next()
                                     {
-                                        Entry<StrongKey, T> next = it.next();
-                                        return new AbstractMap.SimpleEntry<ChecksumPair, T>(new ChecksumPair(input.getKey(), next.getKey().getBytes()), next.getValue());
+                                        Entry<StrongKey, Value<T>> next = it.next();
+                                        return new AbstractMap.SimpleEntry<ChecksumPair, T>(new ChecksumPair(next.getValue().weakKey, next.getKey().getBytes()), next.getValue().value);
                                     }
 
                                     @Override
@@ -576,13 +604,13 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
         ChecksumPair key = (ChecksumPair) k;
         if (key != null)
         {
-            Map<StrongKey, T> m = map.get(key.getWeak() & 0xFFFF);
+            Map<StrongKey, Value<T>> m = map.get(key.getWeak() & 0xFFFF);
             if (m != null)
             {
-                T ret = m.remove(new StrongKey(key.getStrong()));
+                Value<T> ret = m.remove(new StrongKey(key.getStrong()));
                 if (m.isEmpty())
                     map.remove(key.getWeak() & 0xFFFF);
-                return ret;
+                return ret.value;
             }
             return null;
         }
@@ -598,7 +626,7 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
     public int size()
     {
         int size = 0;
-        for (Map<StrongKey, T> m : map.values())
+        for (Map<StrongKey, Value<T>> m : map.values())
             size += m.size();
         return size;
     }
