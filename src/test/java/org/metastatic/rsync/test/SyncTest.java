@@ -6,6 +6,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.*;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -26,12 +28,10 @@ public class SyncTest
     }
 
     @Test
-    public void testWithXXHash() throws IOException, NoSuchAlgorithmException
+    public void testMurmur() throws IOException, NoSuchAlgorithmException
     {
-        byte[] seed = new byte[] { (byte) 0xca, (byte) 0xfe, (byte) 0xba, (byte) 0xbe,
-                (byte) 0xde, (byte) 0xad, (byte) 0xbe, (byte) 0xef };
         Configuration.Builder builder = Configuration.Builder.create();
-        Configuration conf = builder.strongSum(MessageDigest.getInstance("XXHash64", new JarsyncProvider())).checksumSeed(seed).isSeedPrefix(true).build();
+        Configuration conf = builder.strongSum(MessageDigest.getInstance("Murmur3", new JarsyncProvider())).build();
         runtest(conf);
     }
 
@@ -64,11 +64,14 @@ public class SyncTest
         out.write(b);
         byte[] text2 = out.toByteArray();
 
+        long begin = System.nanoTime();
         List<ChecksumPair> checksums = new Generator(conf).generateSums(text1);
         System.out.println("checksums: " + checksums);
         List<Delta> deltas = new Matcher(conf).hashSearch(checksums, text2);
         System.out.println("deltas: " + deltas);
         byte[] text3 = Rebuilder.rebuild(text1, deltas);
         Assert.assertArrayEquals(text2, text3);
+        long end = System.nanoTime();
+        System.out.println(conf.strongSum.getAlgorithm() + " done in " + ((double) (end - begin)) / (double) TimeUnit.NANOSECONDS.convert(1, TimeUnit.MILLISECONDS) + " ms");
     }
 }

@@ -52,15 +52,6 @@ public class SimpleTest implements MatcherListener
 
     static final Logger logger = Logger.getLogger(SimpleTest.class.getName());
 
-    // Constructor.
-    // -----------------------------------------------------------------------
-
-    @Before
-    public void setup()
-    {
-        rand = new Random(31337);
-    }
-
     // Instance methods.
     // -----------------------------------------------------------------------
 
@@ -70,72 +61,63 @@ public class SimpleTest implements MatcherListener
     }
 
     @Test
-    public void test()
+    public void test() throws NoSuchAlgorithmException
     {
-        String[] mds = getMessageDigests();
         Security.addProvider(new JarsyncProvider());
+        String[] mds = getMessageDigests();
         MessageDigest strongSum;
-        // Make sure we use our MD4 at least once!
-        try
-        {
-            strongSum = MessageDigest.getInstance("MD4", "JARSYNC");
-        } catch (Exception x)
-        {
-            throw new Error(x);
-        }
 
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 10; i++)
         {
-            Configuration.Builder builder = Configuration.Builder.create();
-            Configuration conf = builder.strongSum(strongSum).blockLength(rand.nextInt(1400) + 250).weakSum(new Checksum32()).build();
-            byte[] n3w = new byte[rand.nextInt(100000) + 500];
-            rand.nextBytes(n3w);
-            byte[] old = null;
-            try
+            for (String algo : mds)
             {
-                old = mutate(n3w);
-            }
-            catch (Exception x)
-            {
-                throw new Error(x);
-            }
-            logger.info("TEST #" + (i + 1) + ": old data=" + old.length
-                    + " bytes, target data=" + n3w.length + " bytes, blocks="
-                    + conf.blockLength + " bytes, digest="
-                    + conf.strongSum.getAlgorithm());
-            Generator gen = new Generator(conf);
-            List sums = gen.generateSums(old);
-            logger.info("\tGenerated " + sums.size() + " checksums.");
-            deltas = new LinkedList();
-            MatcherStream mat = new MatcherStream(conf);
-            mat.addListener(this);
-            mat.setChecksums(sums);
-            try
-            {
-                mat.update(n3w);
-                mat.doFinal();
-            } catch (ListenerException wontHappen)
-            {
-            }
-            int copies = 0, inserts = 0;
-            for (Delta delta : deltas)
-            {
-                if (delta instanceof DataBlock)
-                    inserts++;
-                else
-                    copies++;
-            }
-            logger.info("\tDeltas: " + copies + " copy commands, "
-                    + inserts + " insert commands.");
-            byte[] reconst = Rebuilder.rebuild(old, deltas);
-            Assert.assertArrayEquals(n3w, reconst);
-            try
-            {
-                strongSum = MessageDigest.getInstance(
-                        mds[rand.nextInt(mds.length)]);
-            } catch (Exception x)
-            {
-                throw new Error(x);
+                rand = new Random(31337 + i);
+                strongSum = MessageDigest.getInstance(algo);
+                Configuration.Builder builder = Configuration.Builder.create();
+                Configuration conf = builder.strongSum(strongSum).blockLength(rand.nextInt(1400) + 250).weakSum(new Checksum32()).build();
+                byte[] n3w = new byte[rand.nextInt(100000) + 500];
+                rand.nextBytes(n3w);
+                byte[] old = null;
+                try
+                {
+                    old = mutate(n3w);
+                } catch (Exception x)
+                {
+                    throw new Error(x);
+                }
+                logger.info("TEST #" + (i + 1) + ": old data=" + old.length
+                        + " bytes, target data=" + n3w.length + " bytes, blocks="
+                        + conf.blockLength + " bytes, digest="
+                        + conf.strongSum.getAlgorithm());
+                long begin = System.nanoTime();
+                Generator gen = new Generator(conf);
+                List sums = gen.generateSums(old);
+                logger.info("\tGenerated " + sums.size() + " checksums.");
+                deltas = new LinkedList();
+                MatcherStream mat = new MatcherStream(conf);
+                mat.addListener(this);
+                mat.setChecksums(sums);
+                try
+                {
+                    mat.update(n3w);
+                    mat.doFinal();
+                } catch (ListenerException wontHappen)
+                {
+                }
+                int copies = 0, inserts = 0;
+                for (Delta delta : deltas)
+                {
+                    if (delta instanceof DataBlock)
+                        inserts++;
+                    else
+                        copies++;
+                }
+                logger.info("\tDeltas: " + copies + " copy commands, "
+                        + inserts + " insert commands.");
+                byte[] reconst = Rebuilder.rebuild(old, deltas);
+                Assert.assertArrayEquals(n3w, reconst);
+                long end = System.nanoTime();
+                logger.info(strongSum.getAlgorithm() + " finished in " + Util.toMillis(end - begin) + " ms");
             }
         }
     }
@@ -188,8 +170,7 @@ public class SimpleTest implements MatcherListener
     {
         HashSet algs = new HashSet();
         String[] tries = {
-                "md2", "md4", "md5", "sha-1", "ripemd128", "ripemd160",
-                "tiger", "whirlpool", "brokenmd4"
+                "md4", "md5", "sha-1", "murmur3"
         };
         for (int i = 0; i < tries.length; i++)
         {
@@ -199,6 +180,7 @@ public class SimpleTest implements MatcherListener
                 algs.add(tries[i]);
             } catch (Exception x)
             {
+                x.printStackTrace();
             }
         }
         return (String[]) algs.toArray(new String[algs.size()]);

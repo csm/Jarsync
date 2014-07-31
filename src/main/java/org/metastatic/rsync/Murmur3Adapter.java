@@ -35,30 +35,54 @@ this exception to your version of the library, but you are not
 obligated to do so.  If you do not wish to do so, delete this
 exception statement from your version.  */
 
-package org.metastatic.rsync.test;
+package org.metastatic.rsync;
 
-import org.junit.Test;
-import org.metastatic.rsync.JarsyncProvider;
-import org.metastatic.rsync.Util;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.Security;
-import java.util.Random;
+import java.security.MessageDigestSpi;
 
-public class TestXXHash
+public class Murmur3Adapter extends MessageDigestSpi
 {
-    @Test
-    public void test1() throws NoSuchAlgorithmException
+    private final HashFunction hashFunction;
+    private Hasher hasher;
+
+    public Murmur3Adapter()
     {
-        // TODO need some test vectors
-        Security.addProvider(new JarsyncProvider());
-        byte[] stuff = new byte[700];
-        new Random(31337).nextBytes(stuff);
-        MessageDigest d = MessageDigest.getInstance("XXHash64");
-        d.update(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }); // seed
-        d.update(stuff);
-        byte[] hash = d.digest();
-        System.out.println(Util.toHexString(hash));
+        hashFunction = Hashing.murmur3_128();
+        hasher = hashFunction.newHasher();
+    }
+
+    @Override
+    protected int engineGetDigestLength()
+    {
+        return hashFunction.bits() / 8;
+    }
+
+    @Override
+    protected void engineUpdate(byte input)
+    {
+        hasher.putByte(input);
+    }
+
+    @Override
+    protected void engineUpdate(byte[] input, int offset, int len)
+    {
+        hasher.putBytes(input, offset, len);
+    }
+
+    @Override
+    protected byte[] engineDigest()
+    {
+        byte[] ret = hasher.hash().asBytes();
+        engineReset();
+        return ret;
+    }
+
+    @Override
+    protected void engineReset()
+    {
+        hasher = hashFunction.newHasher();
     }
 }

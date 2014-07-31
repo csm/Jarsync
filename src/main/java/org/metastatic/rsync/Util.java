@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A number of useful, static methods.
@@ -194,5 +195,10 @@ public final class Util
         if (value == null || !type.isAssignableFrom(value.getClass()))
             return Optional.absent();
         return Optional.of((T) value);
+    }
+
+    public static double toMillis(long nanos)
+    {
+        return (double) nanos / (double) TimeUnit.NANOSECONDS.convert(1, TimeUnit.MILLISECONDS);
     }
 }

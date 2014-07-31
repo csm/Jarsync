@@ -35,6 +35,6 @@ public final class JarsyncProvider extends java.security.Provider
 
         put("MessageDigest.MD4", "org.metastatic.rsync.MD4");
         put("MessageDigest.BrokenMD4", "org.metastatic.rsync.BrokenMD4");
-        put("MessageDigest.XXHash64", "org.metastatic.rsync.XXHash");
+        put("MessageDigest.Murmur3", "org.metastatic.rsync.Murmur3Adapter");
     }
 }

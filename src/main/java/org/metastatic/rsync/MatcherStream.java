@@ -513,6 +513,7 @@ public class MatcherStream
             byte[] digest = new byte[config.strongSumLength];
             System.arraycopy(config.strongSum.digest(), 0, digest, 0, digest.length);
             logger.log(Level.FINE, "looking up strong key: {0}", Util.toHexString(digest));
+            logger.log(Level.FINE, "hash: {0}", hashtable);
             Long ret = hashtable.get(new ChecksumPair(weakSum, digest));
             logger.log(Level.FINE, "looked up {0}", ret);
             return ret;

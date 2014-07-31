@@ -63,11 +63,11 @@ public class SimpleTest2
     // -----------------------------------------------------------------------
 
     @Test
-    public void test()
+    public void test() throws NoSuchAlgorithmException
     {
+        Security.addProvider(new JarsyncProvider());
         String[] mds = getMessageDigests();
         logger.info("rsyncTest");
-        Security.addProvider(new JarsyncProvider());
         MessageDigest strongSum;
         // Make sure we use our MD4 at least once!
         try
@@ -78,48 +78,47 @@ public class SimpleTest2
             throw new Error(x);
         }
 
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 10; i++)
         {
-            Configuration.Builder builder = Configuration.Builder.create();
-            Configuration conf = builder.strongSum(strongSum).blockLength(rand.nextInt(1400) + 250).weakSum(new Checksum32()).build();
-            byte[] n3w = new byte[rand.nextInt(100000) + 500];
-            rand.nextBytes(n3w);
-            byte[] old = null;
-            try
+            for (String algo : mds)
             {
-                old = mutate(n3w);
-            } catch (Exception x)
-            {
-                throw new Error(x);
-            }
-            logger.info("TEST #" + (i + 1) + ": old data=" + old.length
-                    + " bytes, target data=" + n3w.length + " bytes, blocks="
-                    + conf.blockLength + " bytes, digest="
-                    + conf.strongSum.getAlgorithm());
-            Generator gen = new Generator(conf);
-            List sums = gen.generateSums(old);
-            logger.info("\tGenerated " + sums.size() + " checksums.");
-            Matcher mat = new Matcher(conf);
-            List deltas = mat.hashSearch(sums, n3w);
-            int copies = 0, inserts = 0;
-            for (Iterator it = deltas.iterator(); it.hasNext(); )
-            {
-                if (it.next() instanceof DataBlock)
-                    inserts++;
-                else
-                    copies++;
-            }
-            logger.info("\tDeltas: " + copies + " copy commands, "
-                    + inserts + " insert commands.");
-            byte[] reconst = Rebuilder.rebuild(old, deltas);
-            Assert.assertArrayEquals(n3w, reconst);
-            try
-            {
-                strongSum = MessageDigest.getInstance(
-                        mds[rand.nextInt(mds.length)]);
-            } catch (Exception x)
-            {
-                throw new Error(x);
+                strongSum = MessageDigest.getInstance(algo);
+                Configuration.Builder builder = Configuration.Builder.create();
+                Configuration conf = builder.strongSum(strongSum).blockLength(rand.nextInt(1400) + 250).weakSum(new Checksum32()).build();
+                byte[] n3w = new byte[rand.nextInt(100000) + 500];
+                rand.nextBytes(n3w);
+                byte[] old = null;
+                try
+                {
+                    old = mutate(n3w);
+                } catch (Exception x)
+                {
+                    throw new Error(x);
+                }
+                logger.info("TEST #" + (i + 1) + ": old data=" + old.length
+                        + " bytes, target data=" + n3w.length + " bytes, blocks="
+                        + conf.blockLength + " bytes, digest="
+                        + conf.strongSum.getAlgorithm());
+                long begin = System.nanoTime();
+                Generator gen = new Generator(conf);
+                List sums = gen.generateSums(old);
+                logger.info("\tGenerated " + sums.size() + " checksums.");
+                Matcher mat = new Matcher(conf);
+                List deltas = mat.hashSearch(sums, n3w);
+                int copies = 0, inserts = 0;
+                for (Iterator it = deltas.iterator(); it.hasNext(); )
+                {
+                    if (it.next() instanceof DataBlock)
+                        inserts++;
+                    else
+                        copies++;
+                }
+                logger.info("\tDeltas: " + copies + " copy commands, "
+                        + inserts + " insert commands.");
+                byte[] reconst = Rebuilder.rebuild(old, deltas);
+                Assert.assertArrayEquals(n3w, reconst);
+                long end = System.nanoTime();
+                logger.info(strongSum.getAlgorithm() + " finished in " + Util.toMillis(end - begin) + " ms");
             }
         }
     }
@@ -172,8 +171,7 @@ public class SimpleTest2
     {
         HashSet algs = new HashSet();
         String[] tries = {
-                "md2", "md4", "md5", "sha-1", "ripemd128", "ripemd160",
-                "tiger", "whirlpool", "brokenmd4"
+                "md4", "md5", "sha-1", "murmur3"
         };
         for (int i = 0; i < tries.length; i++)
         {
