@@ -61,7 +61,7 @@ public class Rebuilder
      * @param deltas The deltas to apply.
      * @return The reconstructed data.
      */
-    public static byte[] rebuild(byte[] buf, List deltas)
+    public static byte[] rebuild(byte[] buf, List<Delta> deltas)
     {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try
@@ -144,7 +144,7 @@ public class Rebuilder
      *                file.
      * @return A unique {@link java.io.File} containing the reconstruction.
      */
-    public static File rebuildFile(File oldFile, List deltas)
+    public static File rebuildFile(File oldFile, List<Delta> deltas)
             throws IOException
     {
         File newFile = File.createTempFile(TMP_PREFIX, TMP_SUFFIX,
@@ -503,24 +503,18 @@ public class Rebuilder
     /**
      * Sort Offsets and DataBlocks objects by increasing write offset.
      */
-    private static class OffsetComparator implements Comparator
+    private static class OffsetComparator implements Comparator<Delta>
     {
         public OffsetComparator()
         {
         }
 
-        public int compare(Object o1, Object o2)
+        public int compare(Delta o1, Delta o2)
         {
             long offset1 = 0;
             long offset2 = 0;
-            if (o1 instanceof Delta)
-            {
-                offset1 = ((Delta) o1).getWriteOffset();
-            }
-            if (o2 instanceof Delta)
-            {
-                offset2 = ((Delta) o2).getWriteOffset();
-            }
+            offset1 = o1.getWriteOffset();
+            offset2 = o2.getWriteOffset();
             return (int) (offset1 - offset2);
         }
 

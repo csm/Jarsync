@@ -107,7 +107,7 @@ public final class Matcher {
     * @return A list of deltas derived from this search.
     * @throws IOException If <i>filename</i> cannot be read.
     */
-   public List<Delta> hashSearch(List sums, String filename) throws IOException {
+   public List<Delta> hashSearch(List<ChecksumPair> sums, String filename) throws IOException {
       return hashSearch(sums, new FileInputStream(filename));
    }
 
