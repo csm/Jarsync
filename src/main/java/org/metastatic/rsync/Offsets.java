@@ -156,8 +156,8 @@ public class Offsets implements Delta, java.io.Serializable
      */
     public String toString()
     {
-        return "[ old=" + oldOffset + " new=" + newOffset
-                + " len=" + blockLength + " ]";
+        return "Offsets(old=" + oldOffset + " new=" + newOffset
+                + " len=" + blockLength + ")";
     }
 
     /**

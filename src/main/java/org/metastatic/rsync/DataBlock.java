@@ -139,11 +139,11 @@ public class DataBlock implements Delta, java.io.Serializable
      */
     public String toString()
     {
-        String str = "[ off=" + offset + " len=" + data.length + " data=";
+        String str = "DataBlock(off=" + offset + " len=" + data.length + " data=";
         int len = Math.min(data.length, 256);
         str += Util.toHexString(data, 0, len);
         if (len != data.length) str += "...";
-        return str + " ]";
+        return str + ")";
     }
 
     /**

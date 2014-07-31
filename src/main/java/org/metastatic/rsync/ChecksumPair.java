@@ -216,7 +216,7 @@ public class ChecksumPair implements java.io.Serializable
             buf.append('0');
         }
         String weak = buf.toString() + s;
-        return "len=" + length + " offset=" + offset + " weak=" + weak
-                + " strong=" + Util.toHexString(strong);
+        return "ChecksumPair(len=" + length + " offset=" + offset + " weak=" + weak
+                + " strong=" + Util.toHexString(strong) + ")";
     }
 }
