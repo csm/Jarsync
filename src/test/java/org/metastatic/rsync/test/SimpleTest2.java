@@ -87,22 +87,20 @@ public class SimpleTest2
         String[] mds = getMessageDigests();
         logger.info("rsyncTest");
         Security.addProvider(new JarsyncProvider());
-        Configuration conf = new Configuration();
-
+        MessageDigest strongSum;
         // Make sure we use our MD4 at least once!
         try
         {
-            conf.strongSum = MessageDigest.getInstance("MD4", "JARSYNC");
+            strongSum = MessageDigest.getInstance("MD4", "JARSYNC");
         } catch (Exception x)
         {
             throw new Error(x);
         }
-        conf.strongSumLength = conf.strongSum.getDigestLength();
 
         for (int i = 0; i < 50; i++)
         {
-            conf.blockLength = rand.nextInt(1400) + 250;
-            conf.weakSum = new Checksum32();
+            Configuration.Builder builder = Configuration.Builder.create();
+            Configuration conf = builder.strongSum(strongSum).blockLength(rand.nextInt(1400) + 250).weakSum(new Checksum32()).build();
             byte[] n3w = new byte[rand.nextInt(1000000) + 500];
             rand.nextBytes(n3w);
             byte[] old = null;
@@ -136,9 +134,8 @@ public class SimpleTest2
             Assert.assertArrayEquals(n3w, reconst);
             try
             {
-                conf.strongSum = MessageDigest.getInstance(
+                strongSum = MessageDigest.getInstance(
                         mds[rand.nextInt(mds.length)]);
-                conf.strongSumLength = conf.strongSum.getDigestLength();
             } catch (Exception x)
             {
                 throw new Error(x);
@@ -171,13 +168,13 @@ public class SimpleTest2
             {
                 case 0:
                     logger.fine("\tcopy and overwrite (" + from_off + ", "
-                                + from_len + ") -> (" + to_off + ", " + to_len + ")");
+                            + from_len + ") -> (" + to_off + ", " + to_len + ")");
                     corpus.replace(to_off, to_off + to_len,
                             corpus.substring(from_off, from_off + from_len));
                     break;
                 case 1:
                     logger.fine("\tcopy and insert (" + from_off + ", "
-                                + from_len + ") -> (" + to_off + ", " + to_len + ")");
+                            + from_len + ") -> (" + to_off + ", " + to_len + ")");
                     corpus.insert(to_off,
                             corpus.substring(from_off, from_off + from_len));
                     break;

@@ -55,27 +55,27 @@ import java.util.*;
  * the second key. The rationale behind this is that the first key is
  * trivial to compute and that the second key is more difficult to compute
  * but more unique.</p>
- * <p/>
+ *
  * <p>Since the strong key can be a byte array of any length, then this
  * "strong" key can be shorter (and thus less unique) than the "weak"
  * key. For this class to work properly, the stronger key should be at
  * least four bytes in length, preferably longer.</p>
- * <p/>
+ *
  * <p>The weak-key/strong-key method is inspired by (and is was written
  * for) the "hashtable" in the rsync algorithm, and has three levels of
  * key search:</p>
- * <p/>
+ *
  * <ol>
  * <li>Test if the lower 2 bytes of the weak key (the positive part of a
  * 32-bit integer in Java) have been mapped to anything yet. This method
  * always takes O(1) time, and it is assumed that the weak key is
  * trivial to compute.</li>
- * <p/>
+ *
  * <li>Test if the entire weak key is mapped to anything. Since this
  * class uses a linked list to handle collisions where the lower 2 bytes
  * are the same, this method takes at most O(n) operations (also
  * assuming that the weak key is trivial to compute).</li>
- * <p/>
+ *
  * <li>Test if both the weak and strong keys map to an Object. In
  * addition to the linked-list search of the second step, this involves
  * a search of a red-black tree, meaning that the upper-bound time
@@ -83,10 +83,10 @@ import java.util.*;
  * assumption that the strong key is some sort of {@link
  * java.security.MessageDigest}, and thus takes longer to compute.</li>
  * </ol>
- * <p/>
+ *
  * <p>With this method, we can determine if it is worth it to compute the
  * strong key if we have already computed the weak key.</p>
- * <p/>
+ *
  * <p><code>null</code> is not a valid key in this map.</p>
  *
  * @author Casey Marshall
@@ -101,191 +101,6 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
 
     // Inner classes.
     // -----------------------------------------------------------------
-
-    /**
-     * A {@link java.util.Map.Entry} that contains another {@link
-     * java.util.Map} that is keyed with stronger, larger keys, and links
-     * to other SubTables whose {@link #key}'s lower four bytes are
-     * equivalent.
-     *
-     * @author Casey Marshall
-     * @version 1.1
-     * @since 1.1
-     */
-    public class SubTable implements Map.Entry, java.io.Serializable
-    {
-
-        // Constants and variables.
-        // --------------------------------------------------------------
-
-        /**
-         * The sub-table, a {@link java.util.Map} that is an instance of
-         * {@link java.util.TreeMap}.
-         *
-         * @since 1.1
-         */
-        protected Map data;
-
-        /**
-         * The index in the array of sub-tables in which this entry is a
-         * member.
-         *
-         * @since 1.1
-         */
-        protected Integer key;
-
-        /**
-         * The next sub-table, implements a linked list.
-         *
-         * @since 1.1
-         */
-        SubTable next;
-
-        // Constructors.
-        // --------------------------------------------------------------
-
-        /**
-         * Create a new sub-table with a given index and a given Comparator.
-         *
-         * @since 1.1
-         */
-        SubTable(Integer key)
-        {
-            data = new TreeMap();
-            this.key = key;
-            next = null;
-        }
-
-        SubTable(int key)
-        {
-            this(new Integer(key));
-        }
-
-        // Public instance methods.
-        // --------------------------------------------------------------
-
-        /**
-         * Get the Object that is mapped by the strong key <tt>key</tt>.
-         *
-         * @param key The key to look for in this sub-table.
-         * @return The object mapped to by the given key, or null if there
-         * is no such mapping.
-         * @since 1.1
-         */
-        public Object get(StrongKey key)
-        {
-            return data.get(key);
-        }
-
-        /**
-         * Map the given key to the given value.
-         *
-         * @param key   The key.
-         * @param value The value.
-         * @since 1.1
-         */
-        public void put(StrongKey key, Object value)
-        {
-            data.put(key, value);
-        }
-
-        /**
-         * Test if this sub-table contains the given key.
-         *
-         * @param key The key to look for.
-         * @return <tt>true</tt> if there is a mapping from the given key.
-         * @since 1.1
-         */
-        public boolean containsKey(StrongKey key)
-        {
-            return data.containsKey(key);
-        }
-
-        /**
-         * Test if this sub-table contains the given value.
-         *
-         * @param value The value to look for.
-         * @return <tt>true</tt> if there is a mapping to the given value.
-         * @since 1.1
-         */
-        public boolean containsValue(Object value)
-        {
-            return data.containsValue(value);
-        }
-
-        // Public instance methods implementing java.util.Map.Entry
-
-        /**
-         * Test if another object equals this one.
-         *
-         * @param o The object to test.
-         * @return <tt>true</tt> If <tt>o</tt> is an instance of this class
-         * and its fields are equivalent.
-         * @throws java.lang.ClassCastException   If <tt>o</tt> is not an
-         *                                        instance of this class.
-         * @throws java.lang.NullPointerException If <tt>o</tt> is null.
-         * @since 1.1
-         */
-        public boolean equals(Object o)
-        {
-            return data.equals(((SubTable) o).data) &&
-                    key.equals(((SubTable) o).key);
-        }
-
-        /**
-         * Get the key that maps to this entry.
-         *
-         * @return The key, a {@link java.lang.Integer} that maps to this
-         * entry.
-         * @since 1.1
-         */
-        public Object getKey()
-        {
-            return key;
-        }
-
-        /**
-         * Get the value of this entry.
-         *
-         * @return A {@link java.util.Map} that represents the sub-table.
-         * @since 1.1
-         */
-        public Object getValue()
-        {
-            return data;
-        }
-
-        /**
-         * Return the hash code for this entry.
-         *
-         * @return The hash code for the Map that implements this sub-table.
-         * @since 1.1
-         */
-        public int hashCode()
-        {
-            return data.hashCode();
-        }
-
-        // Unsupported methods from java.util.Map.Entry ------------------
-
-        public Object setValue(Object value)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        // Public instance method overriding Object. ---------------------
-
-        /**
-         * Return a string representation of this object.
-         *
-         * @return A string representation of this object.
-         * @since 1.1
-         */
-        public String toString()
-        {
-            return Integer.toHexString(key.intValue()) + " => " + data.toString();
-        }
-    }
 
     /**
      * The stronger of the two keys in this {@link java.util.Map}. It is
@@ -461,7 +276,6 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
         }
     }
 
-
     // Constructors.
     // -----------------------------------------------------------------
 
@@ -485,7 +299,7 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
      *                                        <code>m</code> is null.
      * @since 1.1
      */
-    public TwoKeyMap(Map m)
+    public TwoKeyMap(Map<ChecksumPair, T> m)
     {
         this();
         putAll(m);
@@ -506,6 +320,17 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
     public boolean containsKey(int key)
     {
         return map.containsKey(key);
+    }
+
+    /**
+     * Remove all entries from this map that are keyed by the given weak key.
+     *
+     * @param key The weak key to remove.
+     * @return true if values were removed by this call.
+     */
+    public boolean removeAll(int key)
+    {
+        return map.remove(key) != null;
     }
 
     // Public instance methods implementing java.util.Map. -------------
@@ -543,7 +368,6 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
      */
     public boolean containsKey(Object key)
     {
-        SubTable t;
         if (key instanceof Integer)
         {
             return containsKey(((Integer) key).intValue());
@@ -759,9 +583,7 @@ public class TwoKeyMap<T> implements java.io.Serializable, Map<ChecksumPair, T>
     }
 
     /**
-     * Removes a single mapping if the argument is a {@link ChecksumPair}, or
-     * an entire {@link SubTable} if the argument is a {@link
-     * java.lang.Integer}.
+     * Removes a key from this map. The key must be a {@link org.metastatic.rsync.ChecksumPair}.
      *
      * @param k The key of the object to be removed.
      * @return The removed object, if such a mapping existed.

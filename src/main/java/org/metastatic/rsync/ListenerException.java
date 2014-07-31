@@ -44,9 +44,9 @@
 package org.metastatic.rsync;
 
 /**
- * Signals an exception raised by an @{link GeneratorListener}, @{link
- * MatcherListener}, or @{link RebuilderListener}.
- * <p/>
+ * Signals an exception raised by an {@link org.metastatic.rsync.GeneratorListener}, {@link
+ * org.metastatic.rsync.MatcherListener}, or {@link org.metastatic.rsync.RebuilderListener}.
+ *
  * <p>Listener exceptions may contain other exceptions (the "cause") and
  * may be chained together if there are multiple failures accross
  * multiple listeners.

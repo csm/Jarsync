@@ -43,6 +43,9 @@
 
 package org.metastatic.rsync;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
@@ -50,6 +53,7 @@ import java.io.ObjectOutputStream;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 
 /**
  * A Configuration is a mere collection of objects and values that
@@ -84,47 +88,132 @@ public class Configuration implements Cloneable, java.io.Serializable
     /**
      * The message digest that computes the stronger checksum.
      */
-    public transient MessageDigest strongSum;
+    public transient final MessageDigest strongSum;
 
     /**
      * The rolling checksum.
      */
-    public transient RollingChecksum weakSum;
+    public transient final RollingChecksum weakSum;
 
     /**
      * The length of blocks to checksum.
      */
-    public int blockLength;
+    public final int blockLength;
 
     /**
      * The effective length of the strong sum.
      */
-    public int strongSumLength;
+    public final int strongSumLength;
 
     /**
      * Whether or not to do run-length encoding when making Deltas.
      */
-    public boolean doRunLength;
+    public final boolean doRunLength;
 
     /**
      * The seed for the checksum, to perturb the strong checksum and help
      * avoid collisions in plain rsync (or in similar applicaitons).
      */
-    public byte[] checksumSeed;
+    public final byte[] checksumSeed;
 
     /**
      * The maximum size of byte arrays to create, when they are needed.
      * This vale defaults to 32 kilobytes.
      */
-    public int chunkSize;
+    public final int chunkSize;
+
+    public static class Builder
+    {
+        private MessageDigest strongSum;
+        private RollingChecksum weakSum = new Checksum32();
+        private int blockLength = BLOCK_LENGTH;
+        private int chunkSize = CHUNK_SIZE;
+        private Optional<Integer> strongSumLength = Optional.absent();
+        private boolean doRunLength = false;
+        private byte[] checksumSeed = null;
+
+        private Builder()
+        {
+        }
+
+        public static Builder create()
+        {
+            return new Builder();
+        }
+
+        public Builder strongSum(MessageDigest strongSum)
+        {
+            Preconditions.checkNotNull(strongSum);
+            this.strongSum = strongSum;
+            return this;
+        }
+
+        public Builder weakSum(RollingChecksum weakSum)
+        {
+            Preconditions.checkNotNull(weakSum);
+            this.weakSum = weakSum;
+            return this;
+        }
+
+        public Builder blockLength(int blockLength)
+        {
+            Preconditions.checkArgument(blockLength > 0);
+            this.blockLength = blockLength;
+            return this;
+        }
+
+        public Builder strongSumLength(int strongSumLength)
+        {
+            Preconditions.checkArgument(strongSumLength > 0);
+            if (strongSum != null)
+                Preconditions.checkArgument(strongSumLength <= strongSum.getDigestLength());
+            this.strongSumLength = Optional.of(strongSumLength);
+            return this;
+        }
+
+        public Builder chunkLength(int chunkLength)
+        {
+            Preconditions.checkArgument(chunkLength > 0);
+            this.chunkSize = chunkLength;
+            return this;
+        }
+
+        public Builder doRunLength(boolean doRunLength)
+        {
+            this.doRunLength = doRunLength;
+            return this;
+        }
+
+        public Builder checksumSeed(byte[] checksumSeed)
+        {
+            if (checksumSeed != null)
+                this.checksumSeed = checksumSeed.clone();
+            else
+                this.checksumSeed = null;
+            return this;
+        }
+
+        public Configuration build()
+        {
+            if (strongSum == null)
+                throw new IllegalStateException("must be configured with a strong sum");
+            return new Configuration(strongSum, weakSum, blockLength, strongSumLength.or(strongSum.getDigestLength()),
+                                     doRunLength, checksumSeed, chunkSize);
+        }
+    }
 
     // Constructors.
     // ------------------------------------------------------------------------
 
-    public Configuration()
+    private Configuration(MessageDigest strongSum, RollingChecksum weakSum, int blockLength, int strongSumLength, boolean doRunLength, byte[] checksumSeed, int chunkSize)
     {
-        blockLength = BLOCK_LENGTH;
-        chunkSize = CHUNK_SIZE;
+        this.strongSum = strongSum;
+        this.weakSum = weakSum;
+        this.blockLength = blockLength;
+        this.strongSumLength = strongSumLength;
+        this.doRunLength = doRunLength;
+        this.checksumSeed = checksumSeed;
+        this.chunkSize = chunkSize;
     }
 
     /**
@@ -132,16 +221,17 @@ public class Configuration implements Cloneable, java.io.Serializable
      */
     private Configuration(Configuration that)
     {
+        MessageDigest strong;
         try
         {
-            this.strongSum = (MessageDigest) (that.strongSum != null
+            strong = (MessageDigest) (that.strongSum != null
                     ? that.strongSum.clone()
                     : null);
         } catch (CloneNotSupportedException cnse)
         {
             try
             {
-                this.strongSum = MessageDigest.getInstance(
+                strong = MessageDigest.getInstance(
                         that.strongSum.getAlgorithm());
             } catch (NoSuchAlgorithmException nsae)
             {
@@ -149,6 +239,7 @@ public class Configuration implements Cloneable, java.io.Serializable
                 throw new Error(nsae);
             }
         }
+        this.strongSum = strong;
         this.weakSum = (RollingChecksum) (that.weakSum != null
                 ? that.weakSum.clone()
                 : null);
@@ -172,7 +263,7 @@ public class Configuration implements Cloneable, java.io.Serializable
     // Serialization methods.
     // -----------------------------------------------------------------------
 
-    private void writeObject(ObjectOutputStream out) throws IOException
+    /*private void writeObject(ObjectOutputStream out) throws IOException
     {
         out.defaultWriteObject();
         out.writeUTF(strongSum != null ? strongSum.getAlgorithm() : "NONE");
@@ -193,5 +284,5 @@ public class Configuration implements Cloneable, java.io.Serializable
                 throw new java.io.InvalidObjectException(nsae.getMessage());
             }
         }
-    }
+    }*/
 }

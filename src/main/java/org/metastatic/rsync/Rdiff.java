@@ -336,7 +336,7 @@ public class Rdiff
                 rdiff.makeSignatures(in, out);
             } else
             {
-                List sums = rdiff.makeSignatures(in);
+                List<ChecksumPair> sums = rdiff.makeSignatures(in);
                 rdiff.writeSignatures(sums, out);
                 if (showStats)
                 {
@@ -391,7 +391,7 @@ public class Rdiff
                         " --help' for more information.");
                 System.exit(1);
             }
-            List sigs = rdiff.readSignatures(sigsIn);
+            List<ChecksumPair> sigs = rdiff.readSignatures(sigsIn);
             sigsIn.close();
             if (showStats)
             {
@@ -446,9 +446,10 @@ public class Rdiff
             if (pipe)
             {
                 rdiff.makeDeltas(sigs, newIn, out);
-            } else
+            }
+            else
             {
-                List deltas = rdiff.makeDeltas(sigs, newIn);
+                List<Delta> deltas = rdiff.makeDeltas(sigs, newIn);
                 if (showStats)
                 {
                     int lit = 0;
@@ -457,18 +458,18 @@ public class Rdiff
                     int copy = 0;
                     long copyBytes = 0;
                     System.err.print(PROGNAME + ": delta statistics:");
-                    for (Iterator i = deltas.iterator(); i.hasNext(); )
+                    for (Delta o : deltas)
                     {
-                        Object o = i.next();
                         if (o instanceof Offsets)
                         {
                             copy++;
-                            copyBytes += ((Offsets) o).getBlockLength();
-                        } else
+                            copyBytes += o.getBlockLength();
+                        }
+                        else
                         {
                             lit++;
-                            litBytes += ((DataBlock) o).getBlockLength();
-                            litCmdBytes += 1 + integerLength(((DataBlock) o).getBlockLength());
+                            litBytes += o.getBlockLength();
+                            litCmdBytes += 1 + integerLength(o.getBlockLength());
                         }
                     }
                     if (lit > 0)
@@ -595,14 +596,14 @@ public class Rdiff
                     int copy = 0;
                     long copyBytes = 0;
                     System.err.print(PROGNAME + ": patch statistics:");
-                    for (Iterator i = deltas.iterator(); i.hasNext(); )
+                    for (Object o : deltas)
                     {
-                        Object o = i.next();
                         if (o instanceof Offsets)
                         {
                             copy++;
                             copyBytes += ((Offsets) o).getBlockLength();
-                        } else
+                        }
+                        else
                         {
                             lit++;
                             litBytes += ((DataBlock) o).getBlockLength();
@@ -652,11 +653,9 @@ public class Rdiff
     public void makeSignatures(InputStream in, final OutputStream out)
             throws IOException, NoSuchAlgorithmException
     {
-        Configuration c = new Configuration();
-        c.strongSum = MessageDigest.getInstance("MD4");
-        c.weakSum = new Checksum32(CHAR_OFFSET);
-        c.blockLength = blockLength;
-        c.strongSumLength = strongSumLength;
+        Configuration.Builder builder = Configuration.Builder.create();
+        Configuration c = builder.strongSum(MessageDigest.getInstance("MD4")).weakSum(new Checksum32(CHAR_OFFSET))
+                                 .blockLength(blockLength).strongSumLength(strongSumLength).build();
         GeneratorStream gen = new GeneratorStream(c);
         gen.addListener(new GeneratorListener()
         {
@@ -676,7 +675,7 @@ public class Rdiff
         writeInt(SIG_MAGIC, out);
         writeInt(blockLength, out);
         writeInt(strongSumLength, out);
-        int len = 0;
+        int len;
         byte[] buf = new byte[CHUNK_SIZE];
         while ((len = in.read(buf)) != -1)
         {
@@ -705,14 +704,13 @@ public class Rdiff
      * @throws java.io.IOException If writing fails.
      */
     public void
-    writeSignatures(List sigs, OutputStream out) throws IOException
+    writeSignatures(List<ChecksumPair> sigs, OutputStream out) throws IOException
     {
         writeInt(SIG_MAGIC, out);
         writeInt(blockLength, out);
         writeInt(strongSumLength, out);
-        for (Iterator i = sigs.iterator(); i.hasNext(); )
+        for (ChecksumPair pair : sigs)
         {
-            ChecksumPair pair = (ChecksumPair) i.next();
             writeInt(pair.getWeak(), out);
             out.write(pair.getStrong(), 0, strongSumLength);
         }
@@ -725,14 +723,15 @@ public class Rdiff
      * @return A List of signatures.
      * @throws java.io.IOException If reading fails.
      */
-    public List makeSignatures(InputStream in)
+    public List<ChecksumPair> makeSignatures(InputStream in)
             throws IOException, NoSuchAlgorithmException
     {
-        Configuration c = new Configuration();
-        c.strongSum = MessageDigest.getInstance("MD4");
-        c.weakSum = new Checksum32(CHAR_OFFSET);
-        c.blockLength = blockLength;
-        c.strongSumLength = strongSumLength;
+        Configuration.Builder builder = Configuration.Builder.create();
+        Configuration c = builder.strongSum(MessageDigest.getInstance("MD4"))
+                .weakSum(new Checksum32(CHAR_OFFSET))
+                .blockLength(blockLength)
+                .strongSumLength(strongSumLength)
+                .build();
         return new Generator(c).generateSums(in);
     }
 
@@ -743,9 +742,9 @@ public class Rdiff
      * @return A collection of {@link ChecksumPair}s read.
      * @throws java.io.IOException If the input stream is malformed.
      */
-    public List readSignatures(InputStream in) throws IOException
+    public List<ChecksumPair> readSignatures(InputStream in) throws IOException
     {
-        List sigs = new LinkedList();
+        List<ChecksumPair> sigs = new LinkedList<ChecksumPair>();
         int header = readInt(in);
         if (header != SIG_MAGIC)
         {
@@ -776,14 +775,15 @@ public class Rdiff
         return sigs;
     }
 
-    public void makeDeltas(List sums, InputStream in, final OutputStream out)
+    public void makeDeltas(List<ChecksumPair> sums, InputStream in, final OutputStream out)
             throws IOException, NoSuchAlgorithmException
     {
-        Configuration c = new Configuration();
-        c.strongSum = MessageDigest.getInstance("MD4");
-        c.weakSum = new Checksum32(CHAR_OFFSET);
-        c.blockLength = blockLength;
-        c.strongSumLength = strongSumLength;
+        Configuration.Builder builder = Configuration.Builder.create();
+        Configuration c = builder.strongSum(MessageDigest.getInstance("MD4"))
+                .weakSum(new Checksum32(CHAR_OFFSET))
+                .blockLength(blockLength)
+                .strongSumLength(strongSumLength)
+                .build();
         MatcherStream match = new MatcherStream(c);
         match.setChecksums(sums);
         writeInt(DELTA_MAGIC, out);
@@ -807,7 +807,7 @@ public class Rdiff
                 }
             }
         });
-        int len = 0;
+        int len;
         byte[] buf = new byte[CHUNK_SIZE];
         while ((len = in.read(buf)) != -1)
         {
@@ -830,16 +830,16 @@ public class Rdiff
      * @throws java.io.IOException If writing fails.
      */
     public void
-    writeDeltas(List deltas, OutputStream out) throws IOException
+    writeDeltas(List<Delta> deltas, OutputStream out) throws IOException
     {
         writeInt(DELTA_MAGIC, out);
-        for (Iterator i = deltas.iterator(); i.hasNext(); )
+        for (Delta o : deltas)
         {
-            Object o = i.next();
             if (o instanceof Offsets)
             {
                 writeCopy((Offsets) o, out);
-            } else if (o instanceof DataBlock)
+            }
+            else if (o instanceof DataBlock)
             {
                 writeLiteral((DataBlock) o, out);
             }
@@ -858,15 +858,16 @@ public class Rdiff
      * file to the new.
      * @throws java.io.IOException If reading fails.
      */
-    public List
-    makeDeltas(List sums, InputStream in)
+    public List<Delta>
+    makeDeltas(List<ChecksumPair> sums, InputStream in)
             throws IOException, NoSuchAlgorithmException
     {
-        Configuration c = new Configuration();
-        c.strongSum = MessageDigest.getInstance("MD4");
-        c.weakSum = new Checksum32(CHAR_OFFSET);
-        c.blockLength = blockLength;
-        c.strongSumLength = strongSumLength;
+        Configuration.Builder builder = Configuration.Builder.create();
+        Configuration c = builder.strongSum(MessageDigest.getInstance("MD4"))
+                .weakSum(new Checksum32(CHAR_OFFSET))
+                .blockLength(blockLength)
+                .strongSumLength(strongSumLength)
+                .build();
         return new Matcher(c).hashSearch(sums, in);
     }
 
@@ -877,9 +878,9 @@ public class Rdiff
      * @return A collection of {@link Delta}s read.
      * @throws java.io.IOException If the input stream is malformed.
      */
-    public List readDeltas(InputStream in) throws IOException
+    public List<Delta> readDeltas(InputStream in) throws IOException
     {
-        List deltas = new LinkedList();
+        List<Delta> deltas = new LinkedList<Delta>();
         int header = readInt(in);
         if (header != DELTA_MAGIC)
         {
@@ -889,6 +890,7 @@ public class Rdiff
         int command;
         long offset = 0;
         byte[] buf;
+        int count;
         while ((command = in.read()) != -1)
         {
             switch (command)
@@ -897,19 +899,22 @@ public class Rdiff
                     return deltas;
                 case OP_LITERAL_N1:
                     buf = new byte[(int) readInt(1, in)];
-                    in.read(buf);
+                    count = in.read(buf);
+                    assert count == buf.length;
                     deltas.add(new DataBlock(offset, buf));
                     offset += buf.length;
                     break;
                 case OP_LITERAL_N2:
                     buf = new byte[(int) readInt(2, in)];
-                    in.read(buf);
+                    count = in.read(buf);
+                    assert count == buf.length;
                     deltas.add(new DataBlock(offset, buf));
                     offset += buf.length;
                     break;
                 case OP_LITERAL_N4:
                     buf = new byte[(int) readInt(4, in)];
-                    in.read(buf);
+                    count = in.read(buf);
+                    assert count == buf.length;
                     deltas.add(new DataBlock(offset, buf));
                     offset += buf.length;
                     break;
@@ -953,6 +958,7 @@ public class Rdiff
         long offset = 0;
         byte[] buf;
         boolean end = false;
+        int count;
         read:
         while ((command = deltas.read()) != -1)
         {
@@ -965,19 +971,22 @@ public class Rdiff
                         break read;
                     case OP_LITERAL_N1:
                         buf = new byte[(int) readInt(1, deltas)];
-                        deltas.read(buf);
+                        count = deltas.read(buf);
+                        assert count == buf.length;
                         rs.update(new DataBlock(offset, buf));
                         offset += buf.length;
                         break;
                     case OP_LITERAL_N2:
                         buf = new byte[(int) readInt(2, deltas)];
-                        deltas.read(buf);
+                        count = deltas.read(buf);
+                        assert count == buf.length;
                         rs.update(new DataBlock(offset, buf));
                         offset += buf.length;
                         break;
                     case OP_LITERAL_N4:
                         buf = new byte[(int) readInt(4, deltas)];
-                        deltas.read(buf);
+                        count = deltas.read(buf);
+                        assert count == buf.length;
                         rs.update(new DataBlock(offset, buf));
                         offset += buf.length;
                         break;
@@ -997,11 +1006,11 @@ public class Rdiff
             }
         }
         if (!end)
-            throw new IOException("Didn't recieve RS_OP_END.");
+            throw new IOException("Didn't receive RS_OP_END.");
         f.close();
         FileInputStream fin = new FileInputStream(temp);
         buf = new byte[CHUNK_SIZE];
-        int len = 0;
+        int len;
         while ((len = fin.read(buf)) != -1)
             out.write(buf, 0, len);
     }
@@ -1023,7 +1032,7 @@ public class Rdiff
         temp.deleteOnExit();
         FileInputStream fin = new FileInputStream(temp);
         byte[] buf = new byte[CHUNK_SIZE];
-        int len = 0;
+        int len;
         while ((len = fin.read(buf)) != -1)
         {
             out.write(buf, 0, len);
