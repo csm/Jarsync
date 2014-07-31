@@ -122,6 +122,13 @@ public class Configuration implements Cloneable, java.io.Serializable
      */
     public final int chunkSize;
 
+    /**
+     * A builder object for a configuration.
+     *
+     * <p>All settable values of this builder are optional except for the strong sum. You <em>must</em>
+     * initialize the strong sum property with an appropriate {@link java.security.MessageDigest}
+     * instance.</p>
+     */
     public static class Builder
     {
         private MessageDigest strongSum;
@@ -136,11 +143,22 @@ public class Configuration implements Cloneable, java.io.Serializable
         {
         }
 
+        /**
+         * Create a new builder object.
+         *
+         * @return The new configuration builder.
+         */
         public static Builder create()
         {
             return new Builder();
         }
 
+        /**
+         * Set the strong sum.
+         *
+         * @param strongSum
+         * @return This builder.
+         */
         public Builder strongSum(MessageDigest strongSum)
         {
             Preconditions.checkNotNull(strongSum);
@@ -148,6 +166,13 @@ public class Configuration implements Cloneable, java.io.Serializable
             return this;
         }
 
+        /**
+         * Set the weak sum. The default used, if not set, is {@link org.metastatic.rsync.Checksum32},
+         * created with the default constructor.
+         *
+         * @param weakSum
+         * @return This builder.
+         */
         public Builder weakSum(RollingChecksum weakSum)
         {
             Preconditions.checkNotNull(weakSum);
@@ -155,6 +180,12 @@ public class Configuration implements Cloneable, java.io.Serializable
             return this;
         }
 
+        /**
+         * Sets the block length. The default is {@link #BLOCK_LENGTH}.
+         *
+         * @param blockLength
+         * @return This builder.
+         */
         public Builder blockLength(int blockLength)
         {
             Preconditions.checkArgument(blockLength > 0);
@@ -162,6 +193,12 @@ public class Configuration implements Cloneable, java.io.Serializable
             return this;
         }
 
+        /**
+         * Set the strong sum length. If not set, the digest size of the strong sum is used.
+         *
+         * @param strongSumLength
+         * @return This builder.
+         */
         public Builder strongSumLength(int strongSumLength)
         {
             Preconditions.checkArgument(strongSumLength > 0);
@@ -171,6 +208,11 @@ public class Configuration implements Cloneable, java.io.Serializable
             return this;
         }
 
+        /**
+         * Set the chunk length. The default is {@link #CHUNK_SIZE}.
+         * @param chunkLength
+         * @return This builder.
+         */
         public Builder chunkLength(int chunkLength)
         {
             Preconditions.checkArgument(chunkLength > 0);
@@ -178,12 +220,22 @@ public class Configuration implements Cloneable, java.io.Serializable
             return this;
         }
 
+        /**
+         * Set whether or not to do run-length encoding. The default is false.
+         * @param doRunLength
+         * @return This builder.
+         */
         public Builder doRunLength(boolean doRunLength)
         {
             this.doRunLength = doRunLength;
             return this;
         }
 
+        /**
+         * Set the checksum seed. The default is null.
+         * @param checksumSeed
+         * @return This builder.
+         */
         public Builder checksumSeed(byte[] checksumSeed)
         {
             if (checksumSeed != null)
@@ -193,6 +245,10 @@ public class Configuration implements Cloneable, java.io.Serializable
             return this;
         }
 
+        /**
+         * Build a configuration object.
+         * @return The new configuration.
+         */
         public Configuration build()
         {
             if (strongSum == null)
