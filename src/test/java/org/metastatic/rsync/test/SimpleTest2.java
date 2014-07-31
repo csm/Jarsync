@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.logging.Logger;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.metastatic.rsync.*;
 
@@ -52,9 +53,10 @@ public class SimpleTest2
     // Constructor.
     // -----------------------------------------------------------------------
 
-    public SimpleTest2()
+    @Before
+    public void setup()
     {
-        rand = new Random();
+        rand = new Random(31337);
     }
 
     // Instance methods.
@@ -80,7 +82,7 @@ public class SimpleTest2
         {
             Configuration.Builder builder = Configuration.Builder.create();
             Configuration conf = builder.strongSum(strongSum).blockLength(rand.nextInt(1400) + 250).weakSum(new Checksum32()).build();
-            byte[] n3w = new byte[rand.nextInt(1000000) + 500];
+            byte[] n3w = new byte[rand.nextInt(100000) + 500];
             rand.nextBytes(n3w);
             byte[] old = null;
             try
