@@ -1,0 +1,755 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+<title>Source code</title>
+<link rel="stylesheet" type="text/css" href="../../../../stylesheet.css" title="Style">
+</head>
+<body>
+<div class="sourceContainer">
+<pre><span class="sourceLineNo">001</span>/* TwoKeyMap -- Two-key Map implementation.<a name="line.1"></a>
+<span class="sourceLineNo">002</span>   $Id$<a name="line.2"></a>
+<span class="sourceLineNo">003</span><a name="line.3"></a>
+<span class="sourceLineNo">004</span>Copyright (C) 2003  Casey Marshall &lt;rsdio@metastatic.org&gt;<a name="line.4"></a>
+<span class="sourceLineNo">005</span><a name="line.5"></a>
+<span class="sourceLineNo">006</span>This file is a part of Jarsync.<a name="line.6"></a>
+<span class="sourceLineNo">007</span><a name="line.7"></a>
+<span class="sourceLineNo">008</span>Jarsync is free software; you can redistribute it and/or modify it<a name="line.8"></a>
+<span class="sourceLineNo">009</span>under the terms of the GNU General Public License as published by the<a name="line.9"></a>
+<span class="sourceLineNo">010</span>Free Software Foundation; either version 2 of the License, or (at your<a name="line.10"></a>
+<span class="sourceLineNo">011</span>option) any later version.<a name="line.11"></a>
+<span class="sourceLineNo">012</span><a name="line.12"></a>
+<span class="sourceLineNo">013</span>Jarsync is distributed in the hope that it will be useful, but WITHOUT<a name="line.13"></a>
+<span class="sourceLineNo">014</span>ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or<a name="line.14"></a>
+<span class="sourceLineNo">015</span>FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License<a name="line.15"></a>
+<span class="sourceLineNo">016</span>for more details.<a name="line.16"></a>
+<span class="sourceLineNo">017</span><a name="line.17"></a>
+<span class="sourceLineNo">018</span>You should have received a copy of the GNU General Public License<a name="line.18"></a>
+<span class="sourceLineNo">019</span>along with Jarsync; if not, write to the<a name="line.19"></a>
+<span class="sourceLineNo">020</span><a name="line.20"></a>
+<span class="sourceLineNo">021</span>   Free Software Foundation, Inc.,<a name="line.21"></a>
+<span class="sourceLineNo">022</span>   59 Temple Place, Suite 330,<a name="line.22"></a>
+<span class="sourceLineNo">023</span>   Boston, MA  02111-1307<a name="line.23"></a>
+<span class="sourceLineNo">024</span>   USA<a name="line.24"></a>
+<span class="sourceLineNo">025</span><a name="line.25"></a>
+<span class="sourceLineNo">026</span>Linking Jarsync statically or dynamically with other modules is making<a name="line.26"></a>
+<span class="sourceLineNo">027</span>a combined work based on Jarsync.  Thus, the terms and conditions of<a name="line.27"></a>
+<span class="sourceLineNo">028</span>the GNU General Public License cover the whole combination.<a name="line.28"></a>
+<span class="sourceLineNo">029</span><a name="line.29"></a>
+<span class="sourceLineNo">030</span>As a special exception, the copyright holders of Jarsync give you<a name="line.30"></a>
+<span class="sourceLineNo">031</span>permission to link Jarsync with independent modules to produce an<a name="line.31"></a>
+<span class="sourceLineNo">032</span>executable, regardless of the license terms of these independent<a name="line.32"></a>
+<span class="sourceLineNo">033</span>modules, and to copy and distribute the resulting executable under<a name="line.33"></a>
+<span class="sourceLineNo">034</span>terms of your choice, provided that you also meet, for each linked<a name="line.34"></a>
+<span class="sourceLineNo">035</span>independent module, the terms and conditions of the license of that<a name="line.35"></a>
+<span class="sourceLineNo">036</span>module.  An independent module is a module which is not derived from<a name="line.36"></a>
+<span class="sourceLineNo">037</span>or based on Jarsync.  If you modify Jarsync, you may extend this<a name="line.37"></a>
+<span class="sourceLineNo">038</span>exception to your version of it, but you are not obligated to do so.<a name="line.38"></a>
+<span class="sourceLineNo">039</span>If you do not wish to do so, delete this exception statement from your<a name="line.39"></a>
+<span class="sourceLineNo">040</span>version.  */<a name="line.40"></a>
+<span class="sourceLineNo">041</span><a name="line.41"></a>
+<span class="sourceLineNo">042</span><a name="line.42"></a>
+<span class="sourceLineNo">043</span>package org.metastatic.rsync;<a name="line.43"></a>
+<span class="sourceLineNo">044</span><a name="line.44"></a>
+<span class="sourceLineNo">045</span>import com.google.common.base.Function;<a name="line.45"></a>
+<span class="sourceLineNo">046</span>import com.google.common.collect.Iterators;<a name="line.46"></a>
+<span class="sourceLineNo">047</span><a name="line.47"></a>
+<span class="sourceLineNo">048</span>import java.util.*;<a name="line.48"></a>
+<span class="sourceLineNo">049</span><a name="line.49"></a>
+<span class="sourceLineNo">050</span>/**<a name="line.50"></a>
+<span class="sourceLineNo">051</span> * &lt;p&gt;This is a "double-keyed" mapping. The first key is a 16-bit integer,<a name="line.51"></a>
+<span class="sourceLineNo">052</span> * and the second key is a variable-length byte array. With this, we can<a name="line.52"></a>
+<span class="sourceLineNo">053</span> * compute if a given mapping is "probably" in the map using the first key,<a name="line.53"></a>
+<span class="sourceLineNo">054</span> * and compute whether or not a mapping is definitely in the hashtable with<a name="line.54"></a>
+<span class="sourceLineNo">055</span> * the second key. The rationale behind this is that the first key is<a name="line.55"></a>
+<span class="sourceLineNo">056</span> * trivial to compute and that the second key is more difficult to compute<a name="line.56"></a>
+<span class="sourceLineNo">057</span> * but more unique.&lt;/p&gt;<a name="line.57"></a>
+<span class="sourceLineNo">058</span> *<a name="line.58"></a>
+<span class="sourceLineNo">059</span> * &lt;p&gt;Since the strong key can be a byte array of any length, then this<a name="line.59"></a>
+<span class="sourceLineNo">060</span> * "strong" key can be shorter (and thus less unique) than the "weak"<a name="line.60"></a>
+<span class="sourceLineNo">061</span> * key. For this class to work properly, the stronger key should be at<a name="line.61"></a>
+<span class="sourceLineNo">062</span> * least four bytes in length, preferably longer.&lt;/p&gt;<a name="line.62"></a>
+<span class="sourceLineNo">063</span> *<a name="line.63"></a>
+<span class="sourceLineNo">064</span> * &lt;p&gt;The weak-key/strong-key method is inspired by (and is was written<a name="line.64"></a>
+<span class="sourceLineNo">065</span> * for) the "hashtable" in the rsync algorithm, and has three levels of<a name="line.65"></a>
+<span class="sourceLineNo">066</span> * key search:&lt;/p&gt;<a name="line.66"></a>
+<span class="sourceLineNo">067</span> *<a name="line.67"></a>
+<span class="sourceLineNo">068</span> * &lt;ol&gt;<a name="line.68"></a>
+<span class="sourceLineNo">069</span> * &lt;li&gt;Test if the lower 2 bytes of the weak key (the positive part of a<a name="line.69"></a>
+<span class="sourceLineNo">070</span> * 32-bit integer in Java) have been mapped to anything yet. This method<a name="line.70"></a>
+<span class="sourceLineNo">071</span> * always takes O(1) time, and it is assumed that the weak key is<a name="line.71"></a>
+<span class="sourceLineNo">072</span> * trivial to compute.&lt;/li&gt;<a name="line.72"></a>
+<span class="sourceLineNo">073</span> *<a name="line.73"></a>
+<span class="sourceLineNo">074</span> * &lt;li&gt;Test if the entire weak key is mapped to anything. Since this<a name="line.74"></a>
+<span class="sourceLineNo">075</span> * class uses a linked list to handle collisions where the lower 2 bytes<a name="line.75"></a>
+<span class="sourceLineNo">076</span> * are the same, this method takes at most O(n) operations (also<a name="line.76"></a>
+<span class="sourceLineNo">077</span> * assuming that the weak key is trivial to compute).&lt;/li&gt;<a name="line.77"></a>
+<span class="sourceLineNo">078</span> *<a name="line.78"></a>
+<span class="sourceLineNo">079</span> * &lt;li&gt;Test if both the weak and strong keys map to an Object. In<a name="line.79"></a>
+<span class="sourceLineNo">080</span> * addition to the linked-list search of the second step, this involves<a name="line.80"></a>
+<span class="sourceLineNo">081</span> * a search of a red-black tree, meaning that the upper-bound time<a name="line.81"></a>
+<span class="sourceLineNo">082</span> * complexity ranges from O(lg(n)) to O(n). This works under the<a name="line.82"></a>
+<span class="sourceLineNo">083</span> * assumption that the strong key is some sort of {@link<a name="line.83"></a>
+<span class="sourceLineNo">084</span> * java.security.MessageDigest}, and thus takes longer to compute.&lt;/li&gt;<a name="line.84"></a>
+<span class="sourceLineNo">085</span> * &lt;/ol&gt;<a name="line.85"></a>
+<span class="sourceLineNo">086</span> *<a name="line.86"></a>
+<span class="sourceLineNo">087</span> * &lt;p&gt;With this method, we can determine if it is worth it to compute the<a name="line.87"></a>
+<span class="sourceLineNo">088</span> * strong key if we have already computed the weak key.&lt;/p&gt;<a name="line.88"></a>
+<span class="sourceLineNo">089</span> *<a name="line.89"></a>
+<span class="sourceLineNo">090</span> * &lt;p&gt;&lt;code&gt;null&lt;/code&gt; is not a valid key in this map.&lt;/p&gt;<a name="line.90"></a>
+<span class="sourceLineNo">091</span> *<a name="line.91"></a>
+<span class="sourceLineNo">092</span> * @author Casey Marshall<a name="line.92"></a>
+<span class="sourceLineNo">093</span> * @version $Revision$<a name="line.93"></a>
+<span class="sourceLineNo">094</span> */<a name="line.94"></a>
+<span class="sourceLineNo">095</span>public class TwoKeyMap&lt;T&gt; implements java.io.Serializable, Map&lt;ChecksumPair, T&gt;<a name="line.95"></a>
+<span class="sourceLineNo">096</span>{<a name="line.96"></a>
+<span class="sourceLineNo">097</span>    // Constants and variables.<a name="line.97"></a>
+<span class="sourceLineNo">098</span>    // -----------------------------------------------------------------<a name="line.98"></a>
+<span class="sourceLineNo">099</span><a name="line.99"></a>
+<span class="sourceLineNo">100</span>    private final Map&lt;Integer, Map&lt;StrongKey, T&gt;&gt; map;<a name="line.100"></a>
+<span class="sourceLineNo">101</span><a name="line.101"></a>
+<span class="sourceLineNo">102</span>    // Inner classes.<a name="line.102"></a>
+<span class="sourceLineNo">103</span>    // -----------------------------------------------------------------<a name="line.103"></a>
+<span class="sourceLineNo">104</span><a name="line.104"></a>
+<span class="sourceLineNo">105</span>    /**<a name="line.105"></a>
+<span class="sourceLineNo">106</span>     * The stronger of the two keys in this {@link java.util.Map}. It is<a name="line.106"></a>
+<span class="sourceLineNo">107</span>     * basically a wrapper around an array of bytes, providing methods<a name="line.107"></a>
+<span class="sourceLineNo">108</span>     * important for using this class as the key in a Map, namely the<a name="line.108"></a>
+<span class="sourceLineNo">109</span>     * {@link #hashCode()} and {@link #compareTo(java.lang.Object)}<a name="line.109"></a>
+<span class="sourceLineNo">110</span>     * methods.<a name="line.110"></a>
+<span class="sourceLineNo">111</span>     *<a name="line.111"></a>
+<span class="sourceLineNo">112</span>     * @author Casey Marshall<a name="line.112"></a>
+<span class="sourceLineNo">113</span>     * @version 1.0<a name="line.113"></a>
+<span class="sourceLineNo">114</span>     * @since 1.1<a name="line.114"></a>
+<span class="sourceLineNo">115</span>     */<a name="line.115"></a>
+<span class="sourceLineNo">116</span>    public static class StrongKey implements java.io.Serializable, Comparable<a name="line.116"></a>
+<span class="sourceLineNo">117</span>    {<a name="line.117"></a>
+<span class="sourceLineNo">118</span><a name="line.118"></a>
+<span class="sourceLineNo">119</span>        // Constants and variables.<a name="line.119"></a>
+<span class="sourceLineNo">120</span>        // --------------------------------------------------------------<a name="line.120"></a>
+<span class="sourceLineNo">121</span><a name="line.121"></a>
+<span class="sourceLineNo">122</span>        /**<a name="line.122"></a>
+<span class="sourceLineNo">123</span>         * The key itself. An array of some number of bytes.<a name="line.123"></a>
+<span class="sourceLineNo">124</span>         *<a name="line.124"></a>
+<span class="sourceLineNo">125</span>         * @since 1.0<a name="line.125"></a>
+<span class="sourceLineNo">126</span>         */<a name="line.126"></a>
+<span class="sourceLineNo">127</span>        protected byte[] key;<a name="line.127"></a>
+<span class="sourceLineNo">128</span><a name="line.128"></a>
+<span class="sourceLineNo">129</span>        // Constructors.<a name="line.129"></a>
+<span class="sourceLineNo">130</span>        // --------------------------------------------------------------<a name="line.130"></a>
+<span class="sourceLineNo">131</span><a name="line.131"></a>
+<span class="sourceLineNo">132</span>        /**<a name="line.132"></a>
+<span class="sourceLineNo">133</span>         * Create a new key with the specified bytes. &lt;code&gt;key&lt;/code&gt; can be<a name="line.133"></a>
+<span class="sourceLineNo">134</span>         * &lt;code&gt;null&lt;/code&gt;.<a name="line.134"></a>
+<span class="sourceLineNo">135</span>         *<a name="line.135"></a>
+<span class="sourceLineNo">136</span>         * @param key The bytes that will make up this key.<a name="line.136"></a>
+<span class="sourceLineNo">137</span>         * @since 1.0<a name="line.137"></a>
+<span class="sourceLineNo">138</span>         */<a name="line.138"></a>
+<span class="sourceLineNo">139</span>        StrongKey(byte[] key)<a name="line.139"></a>
+<span class="sourceLineNo">140</span>        {<a name="line.140"></a>
+<span class="sourceLineNo">141</span>            if (key != null)<a name="line.141"></a>
+<span class="sourceLineNo">142</span>                this.key = key.clone();<a name="line.142"></a>
+<span class="sourceLineNo">143</span>            else<a name="line.143"></a>
+<span class="sourceLineNo">144</span>                this.key = key;<a name="line.144"></a>
+<span class="sourceLineNo">145</span>        }<a name="line.145"></a>
+<span class="sourceLineNo">146</span><a name="line.146"></a>
+<span class="sourceLineNo">147</span>        // Instance methods.<a name="line.147"></a>
+<span class="sourceLineNo">148</span>        // --------------------------------------------------------------<a name="line.148"></a>
+<span class="sourceLineNo">149</span><a name="line.149"></a>
+<span class="sourceLineNo">150</span>        /**<a name="line.150"></a>
+<span class="sourceLineNo">151</span>         * Return the bytes that compose this Key.<a name="line.151"></a>
+<span class="sourceLineNo">152</span>         *<a name="line.152"></a>
+<span class="sourceLineNo">153</span>         * @return {@link #key}, the bytes that compose this key.<a name="line.153"></a>
+<span class="sourceLineNo">154</span>         * @since 1.0<a name="line.154"></a>
+<span class="sourceLineNo">155</span>         */<a name="line.155"></a>
+<span class="sourceLineNo">156</span>        public byte[] getBytes()<a name="line.156"></a>
+<span class="sourceLineNo">157</span>        {<a name="line.157"></a>
+<span class="sourceLineNo">158</span>            if (key != null)<a name="line.158"></a>
+<span class="sourceLineNo">159</span>                return key.clone();<a name="line.159"></a>
+<span class="sourceLineNo">160</span>            return null;<a name="line.160"></a>
+<span class="sourceLineNo">161</span>        }<a name="line.161"></a>
+<span class="sourceLineNo">162</span><a name="line.162"></a>
+<span class="sourceLineNo">163</span>        /**<a name="line.163"></a>
+<span class="sourceLineNo">164</span>         * Set the byte array that composes this key.<a name="line.164"></a>
+<span class="sourceLineNo">165</span>         *<a name="line.165"></a>
+<span class="sourceLineNo">166</span>         * @param key The bytes that will compose this key.<a name="line.166"></a>
+<span class="sourceLineNo">167</span>         * @since 1.0<a name="line.167"></a>
+<span class="sourceLineNo">168</span>         */<a name="line.168"></a>
+<span class="sourceLineNo">169</span>        public void setBytes(byte[] key)<a name="line.169"></a>
+<span class="sourceLineNo">170</span>        {<a name="line.170"></a>
+<span class="sourceLineNo">171</span>            if (key != null)<a name="line.171"></a>
+<span class="sourceLineNo">172</span>                this.key = (byte[]) key.clone();<a name="line.172"></a>
+<span class="sourceLineNo">173</span>            else<a name="line.173"></a>
+<span class="sourceLineNo">174</span>                this.key = key;<a name="line.174"></a>
+<span class="sourceLineNo">175</span>        }<a name="line.175"></a>
+<span class="sourceLineNo">176</span><a name="line.176"></a>
+<span class="sourceLineNo">177</span>        /**<a name="line.177"></a>
+<span class="sourceLineNo">178</span>         * The length, in bytes, of this key.<a name="line.178"></a>
+<span class="sourceLineNo">179</span>         *<a name="line.179"></a>
+<span class="sourceLineNo">180</span>         * @return The length of this key in bytes.<a name="line.180"></a>
+<span class="sourceLineNo">181</span>         * @since 1.0<a name="line.181"></a>
+<span class="sourceLineNo">182</span>         */<a name="line.182"></a>
+<span class="sourceLineNo">183</span>        public int length()<a name="line.183"></a>
+<span class="sourceLineNo">184</span>        {<a name="line.184"></a>
+<span class="sourceLineNo">185</span>            if (key != null)<a name="line.185"></a>
+<span class="sourceLineNo">186</span>                return key.length;<a name="line.186"></a>
+<span class="sourceLineNo">187</span>            return 0;<a name="line.187"></a>
+<span class="sourceLineNo">188</span>        }<a name="line.188"></a>
+<span class="sourceLineNo">189</span><a name="line.189"></a>
+<span class="sourceLineNo">190</span>        // Public instance methods overriding java.lang.Object -----------<a name="line.190"></a>
+<span class="sourceLineNo">191</span><a name="line.191"></a>
+<span class="sourceLineNo">192</span>        /**<a name="line.192"></a>
+<span class="sourceLineNo">193</span>         * Return a zero-padded hexadecimal string representing this key.<a name="line.193"></a>
+<span class="sourceLineNo">194</span>         *<a name="line.194"></a>
+<span class="sourceLineNo">195</span>         * @return A hexadecimal string of the bytes in {@link #key}.<a name="line.195"></a>
+<span class="sourceLineNo">196</span>         * @since 1.0<a name="line.196"></a>
+<span class="sourceLineNo">197</span>         */<a name="line.197"></a>
+<span class="sourceLineNo">198</span>        public String toString()<a name="line.198"></a>
+<span class="sourceLineNo">199</span>        {<a name="line.199"></a>
+<span class="sourceLineNo">200</span>            if (key == null || key.length == 0)<a name="line.200"></a>
+<span class="sourceLineNo">201</span>                return "nil";<a name="line.201"></a>
+<span class="sourceLineNo">202</span>            return Util.toHexString(key);<a name="line.202"></a>
+<span class="sourceLineNo">203</span>        }<a name="line.203"></a>
+<span class="sourceLineNo">204</span><a name="line.204"></a>
+<span class="sourceLineNo">205</span>        /**<a name="line.205"></a>
+<span class="sourceLineNo">206</span>         * The hash code for this key. This is defined as the XOR of all<a name="line.206"></a>
+<span class="sourceLineNo">207</span>         * 32-bit blocks of the {@link #key} array.<a name="line.207"></a>
+<span class="sourceLineNo">208</span>         *<a name="line.208"></a>
+<span class="sourceLineNo">209</span>         * @return The hash code for this key.<a name="line.209"></a>
+<span class="sourceLineNo">210</span>         * @since 1.0<a name="line.210"></a>
+<span class="sourceLineNo">211</span>         */<a name="line.211"></a>
+<span class="sourceLineNo">212</span>        public int hashCode()<a name="line.212"></a>
+<span class="sourceLineNo">213</span>        {<a name="line.213"></a>
+<span class="sourceLineNo">214</span>            if (key == null)<a name="line.214"></a>
+<span class="sourceLineNo">215</span>                return 0;<a name="line.215"></a>
+<span class="sourceLineNo">216</span>            int code = 0;<a name="line.216"></a>
+<span class="sourceLineNo">217</span>            for (int i = key.length - 1; i &gt;= 0; i--)<a name="line.217"></a>
+<span class="sourceLineNo">218</span>                code ^= ((int) key[i] &amp; 0xff) &lt;&lt; (((key.length - i - 1) * 8) % 32);<a name="line.218"></a>
+<span class="sourceLineNo">219</span>            return code;<a name="line.219"></a>
+<span class="sourceLineNo">220</span>        }<a name="line.220"></a>
+<span class="sourceLineNo">221</span><a name="line.221"></a>
+<span class="sourceLineNo">222</span>        /**<a name="line.222"></a>
+<span class="sourceLineNo">223</span>         * Test if this key equals another. Two keys are equal if the method<a name="line.223"></a>
+<span class="sourceLineNo">224</span>         * {@link java.util.Arrays#equals(byte[], byte[])} returns true for<a name="line.224"></a>
+<span class="sourceLineNo">225</span>         * thier key arrays.<a name="line.225"></a>
+<span class="sourceLineNo">226</span>         *<a name="line.226"></a>
+<span class="sourceLineNo">227</span>         * @param o The object to compare to.<a name="line.227"></a>
+<span class="sourceLineNo">228</span>         * @return &lt;tt&gt;true&lt;/tt&gt; If this key is equivalent to the argument.<a name="line.228"></a>
+<span class="sourceLineNo">229</span>         * @throws java.lang.ClassCastException If o is not a StrongKey.<a name="line.229"></a>
+<span class="sourceLineNo">230</span>         * @since 1.0<a name="line.230"></a>
+<span class="sourceLineNo">231</span>         */<a name="line.231"></a>
+<span class="sourceLineNo">232</span>        public boolean equals(Object o)<a name="line.232"></a>
+<span class="sourceLineNo">233</span>        {<a name="line.233"></a>
+<span class="sourceLineNo">234</span>            return Arrays.equals(key, ((StrongKey) o).key);<a name="line.234"></a>
+<span class="sourceLineNo">235</span>        }<a name="line.235"></a>
+<span class="sourceLineNo">236</span><a name="line.236"></a>
+<span class="sourceLineNo">237</span>        // java.lang.Comparable interface implementation -----------------<a name="line.237"></a>
+<span class="sourceLineNo">238</span><a name="line.238"></a>
+<span class="sourceLineNo">239</span>        /**<a name="line.239"></a>
+<span class="sourceLineNo">240</span>         * Compare this object to another. This method returns an integer<a name="line.240"></a>
+<span class="sourceLineNo">241</span>         * value less than, equal to, or greater than zero if this key<a name="line.241"></a>
+<span class="sourceLineNo">242</span>         * is less than, equal to, or greater than the given key. This<a name="line.242"></a>
+<span class="sourceLineNo">243</span>         * method will return<a name="line.243"></a>
+<span class="sourceLineNo">244</span>         * &lt;ul&gt;<a name="line.244"></a>
+<span class="sourceLineNo">245</span>         * &lt;li&gt;0 if the {@link #key} fields are references to the same<a name="line.245"></a>
+<span class="sourceLineNo">246</span>         * array.<a name="line.246"></a>
+<span class="sourceLineNo">247</span>         * &lt;li&gt;1 if {@link #key} in this class is null.<a name="line.247"></a>
+<span class="sourceLineNo">248</span>         * &lt;li&gt;-1 if {@link #key} in &lt;tt&gt;o&lt;/tt&gt; is null (null is always less<a name="line.248"></a>
+<span class="sourceLineNo">249</span>         * than everything).<a name="line.249"></a>
+<span class="sourceLineNo">250</span>         * &lt;li&gt;0 if the lengths of the {@link #key} arrays are the same and<a name="line.250"></a>
+<span class="sourceLineNo">251</span>         * their contents are equivalent.<a name="line.251"></a>
+<span class="sourceLineNo">252</span>         * &lt;li&gt;The difference between the lengths of the keys if different.<a name="line.252"></a>
+<span class="sourceLineNo">253</span>         * &lt;li&gt;The difference between the first two different members of the<a name="line.253"></a>
+<span class="sourceLineNo">254</span>         * arrays.<a name="line.254"></a>
+<span class="sourceLineNo">255</span>         * &lt;/ul&gt;<a name="line.255"></a>
+<span class="sourceLineNo">256</span>         *<a name="line.256"></a>
+<span class="sourceLineNo">257</span>         * @param o The key to compare to.<a name="line.257"></a>
+<span class="sourceLineNo">258</span>         * @return An integer derived from the differences of the two keys.<a name="line.258"></a>
+<span class="sourceLineNo">259</span>         * @throws java.lang.ClassCastException If o is not a StrongKey.<a name="line.259"></a>
+<span class="sourceLineNo">260</span>         * @since 1.0<a name="line.260"></a>
+<span class="sourceLineNo">261</span>         */<a name="line.261"></a>
+<span class="sourceLineNo">262</span>        public int compareTo(Object o)<a name="line.262"></a>
+<span class="sourceLineNo">263</span>        {<a name="line.263"></a>
+<span class="sourceLineNo">264</span>            if (!(o instanceof StrongKey))<a name="line.264"></a>
+<span class="sourceLineNo">265</span>                throw new ClassCastException(o.getClass().getName());<a name="line.265"></a>
+<span class="sourceLineNo">266</span>            StrongKey sk = (StrongKey) o;<a name="line.266"></a>
+<span class="sourceLineNo">267</span>            if (key == sk.key) return 0;<a name="line.267"></a>
+<span class="sourceLineNo">268</span>            if (key == null) return 1;<a name="line.268"></a>
+<span class="sourceLineNo">269</span>            if (sk.key == null) return -1;<a name="line.269"></a>
+<span class="sourceLineNo">270</span>            if (java.util.Arrays.equals(key, sk.getBytes())) return 0;<a name="line.270"></a>
+<span class="sourceLineNo">271</span>            if (key.length != sk.length()) return key.length - sk.length();<a name="line.271"></a>
+<span class="sourceLineNo">272</span>            byte[] arr = sk.getBytes();<a name="line.272"></a>
+<span class="sourceLineNo">273</span>            for (int i = 0; i &lt; key.length; i++)<a name="line.273"></a>
+<span class="sourceLineNo">274</span>                if (key[i] != arr[i]) return (key[i] - arr[i]);<a name="line.274"></a>
+<span class="sourceLineNo">275</span>            return 0; // unreachable<a name="line.275"></a>
+<span class="sourceLineNo">276</span>        }<a name="line.276"></a>
+<span class="sourceLineNo">277</span>    }<a name="line.277"></a>
+<span class="sourceLineNo">278</span><a name="line.278"></a>
+<span class="sourceLineNo">279</span>    // Constructors.<a name="line.279"></a>
+<span class="sourceLineNo">280</span>    // -----------------------------------------------------------------<a name="line.280"></a>
+<span class="sourceLineNo">281</span><a name="line.281"></a>
+<span class="sourceLineNo">282</span>    /**<a name="line.282"></a>
+<span class="sourceLineNo">283</span>     * Creates a new Map with 2^16 sub-tables.<a name="line.283"></a>
+<span class="sourceLineNo">284</span>     *<a name="line.284"></a>
+<span class="sourceLineNo">285</span>     * @since 1.1<a name="line.285"></a>
+<span class="sourceLineNo">286</span>     */<a name="line.286"></a>
+<span class="sourceLineNo">287</span>    public TwoKeyMap()<a name="line.287"></a>
+<span class="sourceLineNo">288</span>    {<a name="line.288"></a>
+<span class="sourceLineNo">289</span>        map = new HashMap&lt;Integer, Map&lt;StrongKey, T&gt;&gt;();<a name="line.289"></a>
+<span class="sourceLineNo">290</span>    }<a name="line.290"></a>
+<span class="sourceLineNo">291</span><a name="line.291"></a>
+<span class="sourceLineNo">292</span>    /**<a name="line.292"></a>
+<span class="sourceLineNo">293</span>     * Create a new Map with all the mappings of the given map.<a name="line.293"></a>
+<span class="sourceLineNo">294</span>     *<a name="line.294"></a>
+<span class="sourceLineNo">295</span>     * @param m The initial mappings this Map should contain.<a name="line.295"></a>
+<span class="sourceLineNo">296</span>     * @throws java.lang.ClassCastException   If one of the keys in<a name="line.296"></a>
+<span class="sourceLineNo">297</span>     *                                        &lt;code&gt;m&lt;/code&gt; is not a ChecksumPair.<a name="line.297"></a>
+<span class="sourceLineNo">298</span>     * @throws java.lang.NullPointerException If one of the keys in<a name="line.298"></a>
+<span class="sourceLineNo">299</span>     *                                        &lt;code&gt;m&lt;/code&gt; is null.<a name="line.299"></a>
+<span class="sourceLineNo">300</span>     * @since 1.1<a name="line.300"></a>
+<span class="sourceLineNo">301</span>     */<a name="line.301"></a>
+<span class="sourceLineNo">302</span>    public TwoKeyMap(Map&lt;ChecksumPair, T&gt; m)<a name="line.302"></a>
+<span class="sourceLineNo">303</span>    {<a name="line.303"></a>
+<span class="sourceLineNo">304</span>        this();<a name="line.304"></a>
+<span class="sourceLineNo">305</span>        putAll(m);<a name="line.305"></a>
+<span class="sourceLineNo">306</span>    }<a name="line.306"></a>
+<span class="sourceLineNo">307</span><a name="line.307"></a>
+<span class="sourceLineNo">308</span>    // Instance methods.<a name="line.308"></a>
+<span class="sourceLineNo">309</span>    // -----------------------------------------------------------------<a name="line.309"></a>
+<span class="sourceLineNo">310</span><a name="line.310"></a>
+<span class="sourceLineNo">311</span>    /**<a name="line.311"></a>
+<span class="sourceLineNo">312</span>     * Test if the map contains the lower two bytes of the weak key. This<a name="line.312"></a>
+<span class="sourceLineNo">313</span>     * is the fastest, and least accurate &lt;code&gt;containsKey&lt;/code&gt;<a name="line.313"></a>
+<span class="sourceLineNo">314</span>     * method.<a name="line.314"></a>
+<span class="sourceLineNo">315</span>     *<a name="line.315"></a>
+<span class="sourceLineNo">316</span>     * @param key The key to check.<a name="line.316"></a>
+<span class="sourceLineNo">317</span>     * @return true If there is at least one entry with that weak key.<a name="line.317"></a>
+<span class="sourceLineNo">318</span>     * @since 1.1<a name="line.318"></a>
+<span class="sourceLineNo">319</span>     */<a name="line.319"></a>
+<span class="sourceLineNo">320</span>    public boolean containsKey(int key)<a name="line.320"></a>
+<span class="sourceLineNo">321</span>    {<a name="line.321"></a>
+<span class="sourceLineNo">322</span>        return map.containsKey(key);<a name="line.322"></a>
+<span class="sourceLineNo">323</span>    }<a name="line.323"></a>
+<span class="sourceLineNo">324</span><a name="line.324"></a>
+<span class="sourceLineNo">325</span>    /**<a name="line.325"></a>
+<span class="sourceLineNo">326</span>     * Remove all entries from this map that are keyed by the given weak key.<a name="line.326"></a>
+<span class="sourceLineNo">327</span>     *<a name="line.327"></a>
+<span class="sourceLineNo">328</span>     * @param key The weak key to remove.<a name="line.328"></a>
+<span class="sourceLineNo">329</span>     * @return true if values were removed by this call.<a name="line.329"></a>
+<span class="sourceLineNo">330</span>     */<a name="line.330"></a>
+<span class="sourceLineNo">331</span>    public boolean removeAll(int key)<a name="line.331"></a>
+<span class="sourceLineNo">332</span>    {<a name="line.332"></a>
+<span class="sourceLineNo">333</span>        return map.remove(key) != null;<a name="line.333"></a>
+<span class="sourceLineNo">334</span>    }<a name="line.334"></a>
+<span class="sourceLineNo">335</span><a name="line.335"></a>
+<span class="sourceLineNo">336</span>    // Public instance methods implementing java.util.Map. -------------<a name="line.336"></a>
+<span class="sourceLineNo">337</span><a name="line.337"></a>
+<span class="sourceLineNo">338</span>    /**<a name="line.338"></a>
+<span class="sourceLineNo">339</span>     * Put the given object at the location specified by a key pair.<a name="line.339"></a>
+<span class="sourceLineNo">340</span>     *<a name="line.340"></a>
+<span class="sourceLineNo">341</span>     * @param key   The {@link ChecksumPair} to use as the key.<a name="line.341"></a>
+<span class="sourceLineNo">342</span>     * @param value The value to map to.<a name="line.342"></a>
+<span class="sourceLineNo">343</span>     * @return The old value mapped, if any.<a name="line.343"></a>
+<span class="sourceLineNo">344</span>     * @since 1.1<a name="line.344"></a>
+<span class="sourceLineNo">345</span>     */<a name="line.345"></a>
+<span class="sourceLineNo">346</span>    public T put(ChecksumPair key, T value)<a name="line.346"></a>
+<span class="sourceLineNo">347</span>    {<a name="line.347"></a>
+<span class="sourceLineNo">348</span>        Map&lt;StrongKey, T&gt; m = map.get(key.getWeak());<a name="line.348"></a>
+<span class="sourceLineNo">349</span>        if (m == null)<a name="line.349"></a>
+<span class="sourceLineNo">350</span>        {<a name="line.350"></a>
+<span class="sourceLineNo">351</span>            m = new TreeMap&lt;StrongKey, T&gt;();<a name="line.351"></a>
+<span class="sourceLineNo">352</span>            map.put(key.getWeak(), m);<a name="line.352"></a>
+<span class="sourceLineNo">353</span>        }<a name="line.353"></a>
+<span class="sourceLineNo">354</span>        StrongKey strongKey = new StrongKey(key.getStrong());<a name="line.354"></a>
+<span class="sourceLineNo">355</span>        return m.put(strongKey, value);<a name="line.355"></a>
+<span class="sourceLineNo">356</span>    }<a name="line.356"></a>
+<span class="sourceLineNo">357</span><a name="line.357"></a>
+<span class="sourceLineNo">358</span>    /**<a name="line.358"></a>
+<span class="sourceLineNo">359</span>     * Test if this map contains either the supplied weak key (if the<a name="line.359"></a>
+<span class="sourceLineNo">360</span>     * argument is an Integer) or both the weak and strong keys (if the<a name="line.360"></a>
+<span class="sourceLineNo">361</span>     * argument is a {@link ChecksumPair}).<a name="line.361"></a>
+<span class="sourceLineNo">362</span>     *<a name="line.362"></a>
+<span class="sourceLineNo">363</span>     * @param key The key to check.<a name="line.363"></a>
+<span class="sourceLineNo">364</span>     * @return true If the map contains the given weak key (if<a name="line.364"></a>
+<span class="sourceLineNo">365</span>     * &lt;code&gt;key&lt;/code&gt; is an Integer) or the given pair of keys (if<a name="line.365"></a>
+<span class="sourceLineNo">366</span>     * &lt;code&gt;key&lt;/code&gt; is a {@link ChecksumPair}).<a name="line.366"></a>
+<span class="sourceLineNo">367</span>     * @since 1.1<a name="line.367"></a>
+<span class="sourceLineNo">368</span>     */<a name="line.368"></a>
+<span class="sourceLineNo">369</span>    public boolean containsKey(Object key)<a name="line.369"></a>
+<span class="sourceLineNo">370</span>    {<a name="line.370"></a>
+<span class="sourceLineNo">371</span>        if (key instanceof Integer)<a name="line.371"></a>
+<span class="sourceLineNo">372</span>        {<a name="line.372"></a>
+<span class="sourceLineNo">373</span>            return containsKey(((Integer) key).intValue());<a name="line.373"></a>
+<span class="sourceLineNo">374</span>        }<a name="line.374"></a>
+<span class="sourceLineNo">375</span>        else if (key instanceof ChecksumPair)<a name="line.375"></a>
+<span class="sourceLineNo">376</span>        {<a name="line.376"></a>
+<span class="sourceLineNo">377</span>            Map&lt;StrongKey, T&gt; m = map.get(((ChecksumPair) key).getWeak());<a name="line.377"></a>
+<span class="sourceLineNo">378</span>            if (m != null)<a name="line.378"></a>
+<span class="sourceLineNo">379</span>            {<a name="line.379"></a>
+<span class="sourceLineNo">380</span>                return m.containsKey(new StrongKey(((ChecksumPair) key).getStrong()));<a name="line.380"></a>
+<span class="sourceLineNo">381</span>            }<a name="line.381"></a>
+<span class="sourceLineNo">382</span>        }<a name="line.382"></a>
+<span class="sourceLineNo">383</span>        return false;<a name="line.383"></a>
+<span class="sourceLineNo">384</span>    }<a name="line.384"></a>
+<span class="sourceLineNo">385</span><a name="line.385"></a>
+<span class="sourceLineNo">386</span>    /**<a name="line.386"></a>
+<span class="sourceLineNo">387</span>     * Get the object mapped to by the given key pair. The argument<a name="line.387"></a>
+<span class="sourceLineNo">388</span>     * SHOULD be a {@link ChecksumPair}.<a name="line.388"></a>
+<span class="sourceLineNo">389</span>     *<a name="line.389"></a>
+<span class="sourceLineNo">390</span>     * @param key The key of the object to get.<a name="line.390"></a>
+<span class="sourceLineNo">391</span>     * @return The object keyed by &lt;code&gt;key&lt;/code&gt;, or &lt;code&gt;null&lt;/code&gt;<a name="line.391"></a>
+<span class="sourceLineNo">392</span>     * if there is no such object.<a name="line.392"></a>
+<span class="sourceLineNo">393</span>     * @since 1.1<a name="line.393"></a>
+<span class="sourceLineNo">394</span>     */<a name="line.394"></a>
+<span class="sourceLineNo">395</span>    public T get(Object key)<a name="line.395"></a>
+<span class="sourceLineNo">396</span>    {<a name="line.396"></a>
+<span class="sourceLineNo">397</span>        ChecksumPair pair = (ChecksumPair) key;<a name="line.397"></a>
+<span class="sourceLineNo">398</span>        Map&lt;StrongKey, T&gt; m = map.get(pair.getWeak());<a name="line.398"></a>
+<span class="sourceLineNo">399</span>        if (m != null)<a name="line.399"></a>
+<span class="sourceLineNo">400</span>            return m.get(new StrongKey(pair.getStrong()));<a name="line.400"></a>
+<span class="sourceLineNo">401</span>        return null;<a name="line.401"></a>
+<span class="sourceLineNo">402</span>    }<a name="line.402"></a>
+<span class="sourceLineNo">403</span><a name="line.403"></a>
+<span class="sourceLineNo">404</span>    /**<a name="line.404"></a>
+<span class="sourceLineNo">405</span>     * Clear this Map.<a name="line.405"></a>
+<span class="sourceLineNo">406</span>     *<a name="line.406"></a>
+<span class="sourceLineNo">407</span>     * @since 1.1<a name="line.407"></a>
+<span class="sourceLineNo">408</span>     */<a name="line.408"></a>
+<span class="sourceLineNo">409</span>    public void clear()<a name="line.409"></a>
+<span class="sourceLineNo">410</span>    {<a name="line.410"></a>
+<span class="sourceLineNo">411</span>        map.clear();<a name="line.411"></a>
+<span class="sourceLineNo">412</span>    }<a name="line.412"></a>
+<span class="sourceLineNo">413</span><a name="line.413"></a>
+<span class="sourceLineNo">414</span>    /**<a name="line.414"></a>
+<span class="sourceLineNo">415</span>     * Test if the given value is in one of the sub-tables.<a name="line.415"></a>
+<span class="sourceLineNo">416</span>     *<a name="line.416"></a>
+<span class="sourceLineNo">417</span>     * @param value The value to search for.<a name="line.417"></a>
+<span class="sourceLineNo">418</span>     * @return &lt;tt&gt;true&lt;/tt&gt; if &lt;tt&gt;value&lt;/tt&gt; is in this Map.<a name="line.418"></a>
+<span class="sourceLineNo">419</span>     * @since 1.1<a name="line.419"></a>
+<span class="sourceLineNo">420</span>     */<a name="line.420"></a>
+<span class="sourceLineNo">421</span>    public boolean containsValue(Object value)<a name="line.421"></a>
+<span class="sourceLineNo">422</span>    {<a name="line.422"></a>
+<span class="sourceLineNo">423</span>        for (Map&lt;StrongKey, T&gt; m : map.values())<a name="line.423"></a>
+<span class="sourceLineNo">424</span>        {<a name="line.424"></a>
+<span class="sourceLineNo">425</span>            if (m.containsValue(value))<a name="line.425"></a>
+<span class="sourceLineNo">426</span>                return true;<a name="line.426"></a>
+<span class="sourceLineNo">427</span>        }<a name="line.427"></a>
+<span class="sourceLineNo">428</span>        return false;<a name="line.428"></a>
+<span class="sourceLineNo">429</span>    }<a name="line.429"></a>
+<span class="sourceLineNo">430</span><a name="line.430"></a>
+<span class="sourceLineNo">431</span>    /**<a name="line.431"></a>
+<span class="sourceLineNo">432</span>     * Return an unmodifiable set of the SubTable objects in this class.<a name="line.432"></a>
+<span class="sourceLineNo">433</span>     *<a name="line.433"></a>
+<span class="sourceLineNo">434</span>     * @return A set of all sub-tables from this class.<a name="line.434"></a>
+<span class="sourceLineNo">435</span>     * @since 1.1<a name="line.435"></a>
+<span class="sourceLineNo">436</span>     */<a name="line.436"></a>
+<span class="sourceLineNo">437</span>    public Set&lt;Entry&lt;ChecksumPair, T&gt;&gt; entrySet()<a name="line.437"></a>
+<span class="sourceLineNo">438</span>    {<a name="line.438"></a>
+<span class="sourceLineNo">439</span>        return new AbstractSet&lt;Entry&lt;ChecksumPair, T&gt;&gt;()<a name="line.439"></a>
+<span class="sourceLineNo">440</span>        {<a name="line.440"></a>
+<span class="sourceLineNo">441</span>            @Override<a name="line.441"></a>
+<span class="sourceLineNo">442</span>            public Iterator&lt;Entry&lt;ChecksumPair, T&gt;&gt; iterator()<a name="line.442"></a>
+<span class="sourceLineNo">443</span>            {<a name="line.443"></a>
+<span class="sourceLineNo">444</span>                Iterator&lt;Iterator&lt;Entry&lt;ChecksumPair, T&gt;&gt;&gt; it =<a name="line.444"></a>
+<span class="sourceLineNo">445</span>                        Iterators.transform(map.entrySet().iterator(), new Function&lt;Entry&lt;Integer, Map&lt;StrongKey, T&gt;&gt;, Iterator&lt;Entry&lt;ChecksumPair, T&gt;&gt;&gt;()<a name="line.445"></a>
+<span class="sourceLineNo">446</span>                        {<a name="line.446"></a>
+<span class="sourceLineNo">447</span>                            @Override<a name="line.447"></a>
+<span class="sourceLineNo">448</span>                            public Iterator&lt;Entry&lt;ChecksumPair, T&gt;&gt; apply(final Entry&lt;Integer, Map&lt;StrongKey, T&gt;&gt; input)<a name="line.448"></a>
+<span class="sourceLineNo">449</span>                            {<a name="line.449"></a>
+<span class="sourceLineNo">450</span>                                final Iterator&lt;Entry&lt;StrongKey, T&gt;&gt; it = input.getValue().entrySet().iterator();<a name="line.450"></a>
+<span class="sourceLineNo">451</span>                                return new Iterator&lt;Entry&lt;ChecksumPair, T&gt;&gt;()<a name="line.451"></a>
+<span class="sourceLineNo">452</span>                                {<a name="line.452"></a>
+<span class="sourceLineNo">453</span>                                    @Override<a name="line.453"></a>
+<span class="sourceLineNo">454</span>                                    public boolean hasNext()<a name="line.454"></a>
+<span class="sourceLineNo">455</span>                                    {<a name="line.455"></a>
+<span class="sourceLineNo">456</span>                                        return it.hasNext();<a name="line.456"></a>
+<span class="sourceLineNo">457</span>                                    }<a name="line.457"></a>
+<span class="sourceLineNo">458</span><a name="line.458"></a>
+<span class="sourceLineNo">459</span>                                    @Override<a name="line.459"></a>
+<span class="sourceLineNo">460</span>                                    public Entry&lt;ChecksumPair, T&gt; next()<a name="line.460"></a>
+<span class="sourceLineNo">461</span>                                    {<a name="line.461"></a>
+<span class="sourceLineNo">462</span>                                        Entry&lt;StrongKey, T&gt; next = it.next();<a name="line.462"></a>
+<span class="sourceLineNo">463</span>                                        return new AbstractMap.SimpleEntry&lt;ChecksumPair, T&gt;(new ChecksumPair(input.getKey(), next.getKey().getBytes()), next.getValue());<a name="line.463"></a>
+<span class="sourceLineNo">464</span>                                    }<a name="line.464"></a>
+<span class="sourceLineNo">465</span><a name="line.465"></a>
+<span class="sourceLineNo">466</span>                                    @Override<a name="line.466"></a>
+<span class="sourceLineNo">467</span>                                    public void remove()<a name="line.467"></a>
+<span class="sourceLineNo">468</span>                                    {<a name="line.468"></a>
+<span class="sourceLineNo">469</span>                                        it.remove();<a name="line.469"></a>
+<span class="sourceLineNo">470</span>                                    }<a name="line.470"></a>
+<span class="sourceLineNo">471</span>                                };<a name="line.471"></a>
+<span class="sourceLineNo">472</span>                            }<a name="line.472"></a>
+<span class="sourceLineNo">473</span>                        });<a name="line.473"></a>
+<span class="sourceLineNo">474</span>                return Iterators.concat(it);<a name="line.474"></a>
+<span class="sourceLineNo">475</span>            }<a name="line.475"></a>
+<span class="sourceLineNo">476</span><a name="line.476"></a>
+<span class="sourceLineNo">477</span>            @Override<a name="line.477"></a>
+<span class="sourceLineNo">478</span>            public int size()<a name="line.478"></a>
+<span class="sourceLineNo">479</span>            {<a name="line.479"></a>
+<span class="sourceLineNo">480</span>                return TwoKeyMap.this.size();<a name="line.480"></a>
+<span class="sourceLineNo">481</span>            }<a name="line.481"></a>
+<span class="sourceLineNo">482</span>        };<a name="line.482"></a>
+<span class="sourceLineNo">483</span>    }<a name="line.483"></a>
+<span class="sourceLineNo">484</span><a name="line.484"></a>
+<span class="sourceLineNo">485</span>    /**<a name="line.485"></a>
+<span class="sourceLineNo">486</span>     * Test if this object equals another.<a name="line.486"></a>
+<span class="sourceLineNo">487</span>     *<a name="line.487"></a>
+<span class="sourceLineNo">488</span>     * @return &lt;tt&gt;true&lt;/tt&gt; if &lt;tt&gt;o&lt;/tt&gt; is an instance of this class<a name="line.488"></a>
+<span class="sourceLineNo">489</span>     * and if it contains the same sub-tables.<a name="line.489"></a>
+<span class="sourceLineNo">490</span>     * @throws java.lang.ClassCastException   if &lt;tt&gt;o&lt;/tt&gt; is not an<a name="line.490"></a>
+<span class="sourceLineNo">491</span>     *                                        instance of this class.<a name="line.491"></a>
+<span class="sourceLineNo">492</span>     * @throws java.lang.NullPointerException if &lt;tt&gt;o&lt;/tt&gt; is null.<a name="line.492"></a>
+<span class="sourceLineNo">493</span>     * @since 1.1<a name="line.493"></a>
+<span class="sourceLineNo">494</span>     */<a name="line.494"></a>
+<span class="sourceLineNo">495</span>    public boolean equals(Object o)<a name="line.495"></a>
+<span class="sourceLineNo">496</span>    {<a name="line.496"></a>
+<span class="sourceLineNo">497</span>        try<a name="line.497"></a>
+<span class="sourceLineNo">498</span>        {<a name="line.498"></a>
+<span class="sourceLineNo">499</span>            Map&lt;ChecksumPair, T&gt; m = (Map&lt;ChecksumPair, T&gt;) o;<a name="line.499"></a>
+<span class="sourceLineNo">500</span>            return entrySet().equals(m.entrySet());<a name="line.500"></a>
+<span class="sourceLineNo">501</span>        }<a name="line.501"></a>
+<span class="sourceLineNo">502</span>        catch (ClassCastException e)<a name="line.502"></a>
+<span class="sourceLineNo">503</span>        {<a name="line.503"></a>
+<span class="sourceLineNo">504</span>        }<a name="line.504"></a>
+<span class="sourceLineNo">505</span>        catch (NullPointerException e)<a name="line.505"></a>
+<span class="sourceLineNo">506</span>        {<a name="line.506"></a>
+<span class="sourceLineNo">507</span>        }<a name="line.507"></a>
+<span class="sourceLineNo">508</span>        return false;<a name="line.508"></a>
+<span class="sourceLineNo">509</span>    }<a name="line.509"></a>
+<span class="sourceLineNo">510</span><a name="line.510"></a>
+<span class="sourceLineNo">511</span>    /**<a name="line.511"></a>
+<span class="sourceLineNo">512</span>     * Return the hash code of this object.<a name="line.512"></a>
+<span class="sourceLineNo">513</span>     *<a name="line.513"></a>
+<span class="sourceLineNo">514</span>     * @return The hash code of this object.<a name="line.514"></a>
+<span class="sourceLineNo">515</span>     * @since 1.1<a name="line.515"></a>
+<span class="sourceLineNo">516</span>     */<a name="line.516"></a>
+<span class="sourceLineNo">517</span>    public int hashCode()<a name="line.517"></a>
+<span class="sourceLineNo">518</span>    {<a name="line.518"></a>
+<span class="sourceLineNo">519</span>        return map.hashCode();<a name="line.519"></a>
+<span class="sourceLineNo">520</span>    }<a name="line.520"></a>
+<span class="sourceLineNo">521</span><a name="line.521"></a>
+<span class="sourceLineNo">522</span>    /**<a name="line.522"></a>
+<span class="sourceLineNo">523</span>     * Test if there are no mappings in this map.<a name="line.523"></a>
+<span class="sourceLineNo">524</span>     *<a name="line.524"></a>
+<span class="sourceLineNo">525</span>     * @return &lt;tt&gt;true&lt;/tt&gt; if this map is empty.<a name="line.525"></a>
+<span class="sourceLineNo">526</span>     * @since 1.1<a name="line.526"></a>
+<span class="sourceLineNo">527</span>     */<a name="line.527"></a>
+<span class="sourceLineNo">528</span>    public boolean isEmpty()<a name="line.528"></a>
+<span class="sourceLineNo">529</span>    {<a name="line.529"></a>
+<span class="sourceLineNo">530</span>        return (size() == 0);<a name="line.530"></a>
+<span class="sourceLineNo">531</span>    }<a name="line.531"></a>
+<span class="sourceLineNo">532</span><a name="line.532"></a>
+<span class="sourceLineNo">533</span>    /**<a name="line.533"></a>
+<span class="sourceLineNo">534</span>     * Return an unmodifiable set of all the pairs of keys in this<a name="line.534"></a>
+<span class="sourceLineNo">535</span>     * mapping.<a name="line.535"></a>
+<span class="sourceLineNo">536</span>     *<a name="line.536"></a>
+<span class="sourceLineNo">537</span>     * @return A set of all the {@link ChecksumPair}s in this mapping.<a name="line.537"></a>
+<span class="sourceLineNo">538</span>     * @since 1.1<a name="line.538"></a>
+<span class="sourceLineNo">539</span>     */<a name="line.539"></a>
+<span class="sourceLineNo">540</span>    public Set&lt;ChecksumPair&gt; keySet()<a name="line.540"></a>
+<span class="sourceLineNo">541</span>    {<a name="line.541"></a>
+<span class="sourceLineNo">542</span>        return new AbstractSet&lt;ChecksumPair&gt;()<a name="line.542"></a>
+<span class="sourceLineNo">543</span>        {<a name="line.543"></a>
+<span class="sourceLineNo">544</span>            @Override<a name="line.544"></a>
+<span class="sourceLineNo">545</span>            public Iterator&lt;ChecksumPair&gt; iterator()<a name="line.545"></a>
+<span class="sourceLineNo">546</span>            {<a name="line.546"></a>
+<span class="sourceLineNo">547</span>                Iterator&lt;Entry&lt;ChecksumPair, T&gt;&gt; it = entrySet().iterator();<a name="line.547"></a>
+<span class="sourceLineNo">548</span>                return Iterators.transform(entrySet().iterator(), new Function&lt;Entry&lt;ChecksumPair, T&gt;, ChecksumPair&gt;()<a name="line.548"></a>
+<span class="sourceLineNo">549</span>                {<a name="line.549"></a>
+<span class="sourceLineNo">550</span>                    @Override<a name="line.550"></a>
+<span class="sourceLineNo">551</span>                    public ChecksumPair apply(Entry&lt;ChecksumPair, T&gt; input)<a name="line.551"></a>
+<span class="sourceLineNo">552</span>                    {<a name="line.552"></a>
+<span class="sourceLineNo">553</span>                        return input.getKey();<a name="line.553"></a>
+<span class="sourceLineNo">554</span>                    }<a name="line.554"></a>
+<span class="sourceLineNo">555</span>                });<a name="line.555"></a>
+<span class="sourceLineNo">556</span>            }<a name="line.556"></a>
+<span class="sourceLineNo">557</span><a name="line.557"></a>
+<span class="sourceLineNo">558</span>            @Override<a name="line.558"></a>
+<span class="sourceLineNo">559</span>            public int size()<a name="line.559"></a>
+<span class="sourceLineNo">560</span>            {<a name="line.560"></a>
+<span class="sourceLineNo">561</span>                return TwoKeyMap.this.size();<a name="line.561"></a>
+<span class="sourceLineNo">562</span>            }<a name="line.562"></a>
+<span class="sourceLineNo">563</span>        };<a name="line.563"></a>
+<span class="sourceLineNo">564</span>    }<a name="line.564"></a>
+<span class="sourceLineNo">565</span><a name="line.565"></a>
+<span class="sourceLineNo">566</span>    /**<a name="line.566"></a>
+<span class="sourceLineNo">567</span>     * Put every entry in &lt;code&gt;m&lt;/code&gt; in this map. This method will<a name="line.567"></a>
+<span class="sourceLineNo">568</span>     * only work if the keys of &lt;code&gt;m&lt;/code&gt; are of type {@link<a name="line.568"></a>
+<span class="sourceLineNo">569</span>     * ChecksumPair}.<a name="line.569"></a>
+<span class="sourceLineNo">570</span>     *<a name="line.570"></a>
+<span class="sourceLineNo">571</span>     * @param m The mappings to put.<a name="line.571"></a>
+<span class="sourceLineNo">572</span>     * @throws java.lang.ClassCastException   If every key in &lt;code&gt;m&lt;/code&gt;<a name="line.572"></a>
+<span class="sourceLineNo">573</span>     *                                        is not a ChecksumPair.<a name="line.573"></a>
+<span class="sourceLineNo">574</span>     * @throws java.lang.NullPointerException If a key in &lt;code&gt;m&lt;/code&gt;<a name="line.574"></a>
+<span class="sourceLineNo">575</span>     *                                        is null.<a name="line.575"></a>
+<span class="sourceLineNo">576</span>     * @see #put(org.metastatic.rsync.ChecksumPair, T)<a name="line.576"></a>
+<span class="sourceLineNo">577</span>     * @since 1.1<a name="line.577"></a>
+<span class="sourceLineNo">578</span>     */<a name="line.578"></a>
+<span class="sourceLineNo">579</span>    public void putAll(Map&lt;? extends ChecksumPair, ? extends T&gt; m)<a name="line.579"></a>
+<span class="sourceLineNo">580</span>    {<a name="line.580"></a>
+<span class="sourceLineNo">581</span>        for (Entry&lt;? extends ChecksumPair, ? extends T&gt; e : m.entrySet())<a name="line.581"></a>
+<span class="sourceLineNo">582</span>            put(e.getKey(), e.getValue());<a name="line.582"></a>
+<span class="sourceLineNo">583</span>    }<a name="line.583"></a>
+<span class="sourceLineNo">584</span><a name="line.584"></a>
+<span class="sourceLineNo">585</span>    /**<a name="line.585"></a>
+<span class="sourceLineNo">586</span>     * Removes a key from this map. The key must be a {@link org.metastatic.rsync.ChecksumPair}.<a name="line.586"></a>
+<span class="sourceLineNo">587</span>     *<a name="line.587"></a>
+<span class="sourceLineNo">588</span>     * @param k The key of the object to be removed.<a name="line.588"></a>
+<span class="sourceLineNo">589</span>     * @return The removed object, if such a mapping existed.<a name="line.589"></a>
+<span class="sourceLineNo">590</span>     * &lt;code&gt;null&lt;/code&gt; otherwise.<a name="line.590"></a>
+<span class="sourceLineNo">591</span>     * @since 1.1<a name="line.591"></a>
+<span class="sourceLineNo">592</span>     */<a name="line.592"></a>
+<span class="sourceLineNo">593</span>    public T remove(Object k)<a name="line.593"></a>
+<span class="sourceLineNo">594</span>    {<a name="line.594"></a>
+<span class="sourceLineNo">595</span>        ChecksumPair key = (ChecksumPair) k;<a name="line.595"></a>
+<span class="sourceLineNo">596</span>        if (key != null)<a name="line.596"></a>
+<span class="sourceLineNo">597</span>        {<a name="line.597"></a>
+<span class="sourceLineNo">598</span>            Map&lt;StrongKey, T&gt; m = map.get(key.getWeak());<a name="line.598"></a>
+<span class="sourceLineNo">599</span>            if (m != null)<a name="line.599"></a>
+<span class="sourceLineNo">600</span>            {<a name="line.600"></a>
+<span class="sourceLineNo">601</span>                T ret = m.remove(new StrongKey(key.getStrong()));<a name="line.601"></a>
+<span class="sourceLineNo">602</span>                if (m.isEmpty())<a name="line.602"></a>
+<span class="sourceLineNo">603</span>                    map.remove(key.getWeak());<a name="line.603"></a>
+<span class="sourceLineNo">604</span>                return ret;<a name="line.604"></a>
+<span class="sourceLineNo">605</span>            }<a name="line.605"></a>
+<span class="sourceLineNo">606</span>            return null;<a name="line.606"></a>
+<span class="sourceLineNo">607</span>        }<a name="line.607"></a>
+<span class="sourceLineNo">608</span>        return null;<a name="line.608"></a>
+<span class="sourceLineNo">609</span>    }<a name="line.609"></a>
+<span class="sourceLineNo">610</span><a name="line.610"></a>
+<span class="sourceLineNo">611</span>    /**<a name="line.611"></a>
+<span class="sourceLineNo">612</span>     * Return the number of mappings.<a name="line.612"></a>
+<span class="sourceLineNo">613</span>     *<a name="line.613"></a>
+<span class="sourceLineNo">614</span>     * @return The number of mappings.<a name="line.614"></a>
+<span class="sourceLineNo">615</span>     * @since 1.1<a name="line.615"></a>
+<span class="sourceLineNo">616</span>     */<a name="line.616"></a>
+<span class="sourceLineNo">617</span>    public int size()<a name="line.617"></a>
+<span class="sourceLineNo">618</span>    {<a name="line.618"></a>
+<span class="sourceLineNo">619</span>        int size = 0;<a name="line.619"></a>
+<span class="sourceLineNo">620</span>        for (Map&lt;StrongKey, T&gt; m : map.values())<a name="line.620"></a>
+<span class="sourceLineNo">621</span>            size += m.size();<a name="line.621"></a>
+<span class="sourceLineNo">622</span>        return size;<a name="line.622"></a>
+<span class="sourceLineNo">623</span>    }<a name="line.623"></a>
+<span class="sourceLineNo">624</span><a name="line.624"></a>
+<span class="sourceLineNo">625</span>    /**<a name="line.625"></a>
+<span class="sourceLineNo">626</span>     * Return a Collection of all the values mapped by this object.<a name="line.626"></a>
+<span class="sourceLineNo">627</span>     *<a name="line.627"></a>
+<span class="sourceLineNo">628</span>     * @return A Collection of all values mapped by this object.<a name="line.628"></a>
+<span class="sourceLineNo">629</span>     * @since 1.1<a name="line.629"></a>
+<span class="sourceLineNo">630</span>     */<a name="line.630"></a>
+<span class="sourceLineNo">631</span>    public Collection&lt;T&gt; values()<a name="line.631"></a>
+<span class="sourceLineNo">632</span>    {<a name="line.632"></a>
+<span class="sourceLineNo">633</span>        return new AbstractCollection&lt;T&gt;()<a name="line.633"></a>
+<span class="sourceLineNo">634</span>        {<a name="line.634"></a>
+<span class="sourceLineNo">635</span>            @Override<a name="line.635"></a>
+<span class="sourceLineNo">636</span>            public Iterator&lt;T&gt; iterator()<a name="line.636"></a>
+<span class="sourceLineNo">637</span>            {<a name="line.637"></a>
+<span class="sourceLineNo">638</span>                return Iterators.transform(entrySet().iterator(), new Function&lt;Entry&lt;ChecksumPair, T&gt;, T&gt;()<a name="line.638"></a>
+<span class="sourceLineNo">639</span>                {<a name="line.639"></a>
+<span class="sourceLineNo">640</span>                    @Override<a name="line.640"></a>
+<span class="sourceLineNo">641</span>                    public T apply(Entry&lt;ChecksumPair, T&gt; input)<a name="line.641"></a>
+<span class="sourceLineNo">642</span>                    {<a name="line.642"></a>
+<span class="sourceLineNo">643</span>                        return input.getValue();<a name="line.643"></a>
+<span class="sourceLineNo">644</span>                    }<a name="line.644"></a>
+<span class="sourceLineNo">645</span>                });<a name="line.645"></a>
+<span class="sourceLineNo">646</span>            }<a name="line.646"></a>
+<span class="sourceLineNo">647</span><a name="line.647"></a>
+<span class="sourceLineNo">648</span>            @Override<a name="line.648"></a>
+<span class="sourceLineNo">649</span>            public int size()<a name="line.649"></a>
+<span class="sourceLineNo">650</span>            {<a name="line.650"></a>
+<span class="sourceLineNo">651</span>                return TwoKeyMap.this.size();<a name="line.651"></a>
+<span class="sourceLineNo">652</span>            }<a name="line.652"></a>
+<span class="sourceLineNo">653</span>        };<a name="line.653"></a>
+<span class="sourceLineNo">654</span>    }<a name="line.654"></a>
+<span class="sourceLineNo">655</span><a name="line.655"></a>
+<span class="sourceLineNo">656</span>    // Public instance methods overriding java.lang.Object. ------------<a name="line.656"></a>
+<span class="sourceLineNo">657</span><a name="line.657"></a>
+<span class="sourceLineNo">658</span>    /**<a name="line.658"></a>
+<span class="sourceLineNo">659</span>     * Create a printable version of this Map.<a name="line.659"></a>
+<span class="sourceLineNo">660</span>     *<a name="line.660"></a>
+<span class="sourceLineNo">661</span>     * @return A {@link java.lang.String} representing this object.<a name="line.661"></a>
+<span class="sourceLineNo">662</span>     * @since 1.1<a name="line.662"></a>
+<span class="sourceLineNo">663</span>     */<a name="line.663"></a>
+<span class="sourceLineNo">664</span>    public String toString()<a name="line.664"></a>
+<span class="sourceLineNo">665</span>    {<a name="line.665"></a>
+<span class="sourceLineNo">666</span>        StringBuilder str = new StringBuilder("{");<a name="line.666"></a>
+<span class="sourceLineNo">667</span>        boolean first = true;<a name="line.667"></a>
+<span class="sourceLineNo">668</span>        for (Entry&lt;ChecksumPair, T&gt; e : entrySet())<a name="line.668"></a>
+<span class="sourceLineNo">669</span>        {<a name="line.669"></a>
+<span class="sourceLineNo">670</span>            if (!first)<a name="line.670"></a>
+<span class="sourceLineNo">671</span>                str.append(", ");<a name="line.671"></a>
+<span class="sourceLineNo">672</span>            str.append('(');<a name="line.672"></a>
+<span class="sourceLineNo">673</span>            str.append(Integer.toHexString(e.getKey().getWeak()));<a name="line.673"></a>
+<span class="sourceLineNo">674</span>            str.append(", ");<a name="line.674"></a>
+<span class="sourceLineNo">675</span>            str.append(Util.toHexString(e.getKey().getStrong()));<a name="line.675"></a>
+<span class="sourceLineNo">676</span>            str.append(") =&gt; ");<a name="line.676"></a>
+<span class="sourceLineNo">677</span>            str.append(e.getValue());<a name="line.677"></a>
+<span class="sourceLineNo">678</span>            first = false;<a name="line.678"></a>
+<span class="sourceLineNo">679</span>        }<a name="line.679"></a>
+<span class="sourceLineNo">680</span>        str.append("}");<a name="line.680"></a>
+<span class="sourceLineNo">681</span>        return str.toString();<a name="line.681"></a>
+<span class="sourceLineNo">682</span>    }<a name="line.682"></a>
+<span class="sourceLineNo">683</span>}<a name="line.683"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+</div>
+</body>
+</html>
