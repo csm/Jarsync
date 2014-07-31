@@ -18,7 +18,25 @@ import org.metastatic.rsync.*;
 public class SyncTest
 {
     @Test
-    public void test() throws IOException, NoSuchAlgorithmException {
+    public void test() throws IOException, NoSuchAlgorithmException
+    {
+        Configuration.Builder builder = Configuration.Builder.create();
+        Configuration conf = builder.strongSum(MessageDigest.getInstance("MD5")).build();
+        runtest(conf);
+    }
+
+    @Test
+    public void testWithXXHash() throws IOException, NoSuchAlgorithmException
+    {
+        byte[] seed = new byte[] { (byte) 0xca, (byte) 0xfe, (byte) 0xba, (byte) 0xbe,
+                (byte) 0xde, (byte) 0xad, (byte) 0xbe, (byte) 0xef };
+        Configuration.Builder builder = Configuration.Builder.create();
+        Configuration conf = builder.strongSum(MessageDigest.getInstance("XXHash64", new JarsyncProvider())).checksumSeed(seed).isSeedPrefix(true).build();
+        runtest(conf);
+    }
+
+    private void runtest(Configuration conf) throws IOException
+    {
         byte[] a = new byte[700];
         Arrays.fill(a, (byte) 'a');
         byte[] b = new byte[700];
@@ -45,9 +63,6 @@ public class SyncTest
         out.write(new byte[1]);
         out.write(b);
         byte[] text2 = out.toByteArray();
-
-        Configuration.Builder builder = Configuration.Builder.create();
-        Configuration conf = builder.strongSum(MessageDigest.getInstance("MD5")).build();
 
         List<ChecksumPair> checksums = new Generator(conf).generateSums(text1);
         System.out.println("checksums: " + checksums);

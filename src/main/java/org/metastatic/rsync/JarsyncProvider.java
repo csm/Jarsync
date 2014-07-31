@@ -31,9 +31,10 @@ public final class JarsyncProvider extends java.security.Provider
     public JarsyncProvider()
     {
         super("JARSYNC", org.metastatic.rsync.version.VERSION_DOUBLE,
-                "Jarsync provider; implementing MD4, BrokenMD4");
+                "Jarsync provider; implementing MD4, BrokenMD4, xxhash64");
 
         put("MessageDigest.MD4", "org.metastatic.rsync.MD4");
         put("MessageDigest.BrokenMD4", "org.metastatic.rsync.BrokenMD4");
+        put("MessageDigest.XXHash64", "org.metastatic.rsync.XXHash");
     }
 }

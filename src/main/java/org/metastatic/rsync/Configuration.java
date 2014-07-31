@@ -1,4 +1,4 @@
-/*
+/* Configuration.java -- rsync algorithm configuration.
 
 Copyright (C) 2014 Casey Marshall
 
@@ -29,20 +29,9 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 
 /**
- * A Configuration is a mere collection of objects and values that
- * compose a particular configuration for the algorithm, for example the
- * message digest that computes the strong checksum.
- * <p/>
- * <p>Usage of a Configuration involves setting the member fields of
- * this object to thier appropriate values; thus, it is up to the
- * programmer to specify the {@link #strongSum}, {@link #weakSum},
- * {@link #blockLength} and {@link #strongSumLength} to be used. The
- * other fields are optional.</p>
- *
- * @author Casey Marshall
- * @version $Revision$
+ * Configuration parameters for the rsync algorithm.
  */
-public class Configuration implements Cloneable, java.io.Serializable
+public class Configuration implements Cloneable
 {
 
     // Constants and variables.
@@ -85,13 +74,19 @@ public class Configuration implements Cloneable, java.io.Serializable
 
     /**
      * The seed for the checksum, to perturb the strong checksum and help
-     * avoid collisions in plain rsync (or in similar applicaitons).
+     * avoid collisions in plain rsync (or in similar applications).
      */
     public final byte[] checksumSeed;
 
     /**
+     * Tells whether the checksum seed is a prefix of the data to be hashed,
+     * or a suffix.
+     */
+    public final boolean isSeedPrefix;
+
+    /**
      * The maximum size of byte arrays to create, when they are needed.
-     * This vale defaults to 32 kilobytes.
+     * This value defaults to 32 kilobytes.
      */
     public final int chunkSize;
 
@@ -111,6 +106,7 @@ public class Configuration implements Cloneable, java.io.Serializable
         private Optional<Integer> strongSumLength = Optional.absent();
         private boolean doRunLength = false;
         private byte[] checksumSeed = null;
+        private boolean isSeedPrefix = false;
 
         private Builder()
         {
@@ -218,6 +214,12 @@ public class Configuration implements Cloneable, java.io.Serializable
             return this;
         }
 
+        public Builder isSeedPrefix(boolean isSeedPrefix)
+        {
+            this.isSeedPrefix = isSeedPrefix;
+            return this;
+        }
+
         /**
          * Build a configuration object.
          * @return The new configuration.
@@ -226,15 +228,17 @@ public class Configuration implements Cloneable, java.io.Serializable
         {
             if (strongSum == null)
                 throw new IllegalStateException("must be configured with a strong sum");
+            if (strongSumLength.isPresent() && strongSumLength.get() > strongSum.getDigestLength())
+                throw new IllegalStateException("explicit strong sum length must be less than or equal to the digest length");
             return new Configuration(strongSum, weakSum, blockLength, strongSumLength.or(strongSum.getDigestLength()),
-                                     doRunLength, checksumSeed, chunkSize);
+                                     doRunLength, checksumSeed, chunkSize, isSeedPrefix);
         }
     }
 
     // Constructors.
     // ------------------------------------------------------------------------
 
-    private Configuration(MessageDigest strongSum, RollingChecksum weakSum, int blockLength, int strongSumLength, boolean doRunLength, byte[] checksumSeed, int chunkSize)
+    private Configuration(MessageDigest strongSum, RollingChecksum weakSum, int blockLength, int strongSumLength, boolean doRunLength, byte[] checksumSeed, int chunkSize, boolean isSeedPrefix)
     {
         this.strongSum = strongSum;
         this.weakSum = weakSum;
@@ -243,6 +247,7 @@ public class Configuration implements Cloneable, java.io.Serializable
         this.doRunLength = doRunLength;
         this.checksumSeed = checksumSeed;
         this.chunkSize = chunkSize;
+        this.isSeedPrefix = isSeedPrefix;
     }
 
     /**
@@ -279,6 +284,7 @@ public class Configuration implements Cloneable, java.io.Serializable
                 ? that.checksumSeed.clone()
                 : null);
         this.chunkSize = that.chunkSize;
+        this.isSeedPrefix = that.isSeedPrefix;
     }
 
     // Instance methods.
@@ -289,29 +295,4 @@ public class Configuration implements Cloneable, java.io.Serializable
         return new Configuration(this);
     }
 
-    // Serialization methods.
-    // -----------------------------------------------------------------------
-
-    /*private void writeObject(ObjectOutputStream out) throws IOException
-    {
-        out.defaultWriteObject();
-        out.writeUTF(strongSum != null ? strongSum.getAlgorithm() : "NONE");
-    }
-
-    private void readObject(ObjectInputStream in)
-            throws IOException, ClassNotFoundException
-    {
-        in.defaultReadObject();
-        String s = in.readUTF();
-        if (!s.equals("NONE"))
-        {
-            try
-            {
-                strongSum = MessageDigest.getInstance(s);
-            } catch (NoSuchAlgorithmException nsae)
-            {
-                throw new java.io.InvalidObjectException(nsae.getMessage());
-            }
-        }
-    }*/
 }

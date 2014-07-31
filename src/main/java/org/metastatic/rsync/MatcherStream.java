@@ -26,6 +26,8 @@ package org.metastatic.rsync;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A streaming version of {@link Matcher}. The idea here is that the
@@ -50,6 +52,8 @@ public class MatcherStream
 
     // Constants and fields.
     // -------------------------------------------------------------------------
+
+    private static final Logger logger = Logger.getLogger(MatcherStream.class.getName());
 
     /**
      * The configuration.
@@ -499,16 +503,19 @@ public class MatcherStream
         Integer weakSum = config.weakSum.getValue();
         if (hashtable.containsKey(weakSum.intValue()))
         {
+            logger.log(Level.FINE, "hash hit on weak key: {0}", String.format("%08x", weakSum));
             config.strongSum.reset();
-            config.strongSum.update(block, off, len);
-            if (config.checksumSeed != null)
-            {
+            if (config.checksumSeed != null && config.isSeedPrefix)
                 config.strongSum.update(config.checksumSeed);
-            }
+            config.strongSum.update(block, off, len);
+            if (config.checksumSeed != null && !config.isSeedPrefix)
+                config.strongSum.update(config.checksumSeed);
             byte[] digest = new byte[config.strongSumLength];
-            System.arraycopy(config.strongSum.digest(), 0, digest, 0,
-                    digest.length);
-            return hashtable.get(new ChecksumPair(weakSum, digest));
+            System.arraycopy(config.strongSum.digest(), 0, digest, 0, digest.length);
+            logger.log(Level.FINE, "looking up strong key: {0}", Util.toHexString(digest));
+            Long ret = hashtable.get(new ChecksumPair(weakSum, digest));
+            logger.log(Level.FINE, "looked up {0}", ret);
+            return ret;
         }
         return null;
     }
