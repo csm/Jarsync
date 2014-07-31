@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/csm/Jarsync.svg?branch=master)](https://travis-ci.org/csm/Jarsync)
+[![Build Status](https://travis-ci.org/csm/Jarsync.svg?branch=master)](https://travis-ci.org/csm/Jarsync) [![MIT License](http://img.shields.io/badge/license-mit-blue.png)](http://badges.mit-license.org)
 
 # Jarsync -- rsync in Java
 
