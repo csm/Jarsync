@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 package org.metastatic.rsync;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 
@@ -315,12 +317,12 @@ public class Rdiff
                 rdiff.makeSignatures(in, out);
             } else
             {
-                List<ChecksumPair> sums = rdiff.makeSignatures(in);
-                rdiff.writeSignatures(sums, out);
+                List<ChecksumLocation> locations = rdiff.makeSignatures(in);
+                rdiff.writeSignatures(locations, out);
                 if (showStats)
                 {
                     System.err.println(PROGNAME + ": signature statistics: " +
-                            "signature[" + sums.size() + " blocks, " + rdiff.blockLength +
+                            "signature[" + locations.size() + " blocks, " + rdiff.blockLength +
                             " bytes per block]");
                 }
             }
@@ -370,7 +372,7 @@ public class Rdiff
                         " --help' for more information.");
                 System.exit(1);
             }
-            List<ChecksumPair> sigs = rdiff.readSignatures(sigsIn);
+            List<ChecksumLocation> sigs = rdiff.readSignatures(sigsIn);
             sigsIn.close();
             if (showStats)
             {
@@ -640,11 +642,11 @@ public class Rdiff
         {
             public void update(GeneratorEvent ev) throws ListenerException
             {
-                ChecksumPair pair = ev.getChecksumPair();
+                ChecksumLocation location = ev.getChecksumLocation();
                 try
                 {
-                    Rdiff.writeInt(pair.getWeak(), out);
-                    out.write(pair.getStrong(), 0, strongSumLength);
+                    Rdiff.writeInt(location.getChecksumPair().getWeak(), out);
+                    out.write(location.getChecksumPair().getStrong(), 0, strongSumLength);
                 } catch (IOException ioe)
                 {
                     throw new ListenerException(ioe);
@@ -683,15 +685,15 @@ public class Rdiff
      * @throws java.io.IOException If writing fails.
      */
     public void
-    writeSignatures(List<ChecksumPair> sigs, OutputStream out) throws IOException
+    writeSignatures(List<ChecksumLocation> sigs, OutputStream out) throws IOException
     {
         writeInt(SIG_MAGIC, out);
         writeInt(blockLength, out);
         writeInt(strongSumLength, out);
-        for (ChecksumPair pair : sigs)
+        for (ChecksumLocation location : sigs)
         {
-            writeInt(pair.getWeak(), out);
-            out.write(pair.getStrong(), 0, strongSumLength);
+            writeInt(location.getChecksumPair().getWeak(), out);
+            out.write(location.getChecksumPair().getStrong(), 0, strongSumLength);
         }
     }
 
@@ -702,7 +704,7 @@ public class Rdiff
      * @return A List of signatures.
      * @throws java.io.IOException If reading fails.
      */
-    public List<ChecksumPair> makeSignatures(InputStream in)
+    public List<ChecksumLocation> makeSignatures(InputStream in)
             throws IOException, NoSuchAlgorithmException
     {
         Configuration.Builder builder = Configuration.Builder.create();
@@ -721,9 +723,9 @@ public class Rdiff
      * @return A collection of {@link ChecksumPair}s read.
      * @throws java.io.IOException If the input stream is malformed.
      */
-    public List<ChecksumPair> readSignatures(InputStream in) throws IOException
+    public List<ChecksumLocation> readSignatures(InputStream in) throws IOException
     {
-        List<ChecksumPair> sigs = new LinkedList<ChecksumPair>();
+        List<ChecksumLocation> sigs = new LinkedList<ChecksumLocation>();
         int header = readInt(in);
         if (header != SIG_MAGIC)
         {
@@ -744,7 +746,8 @@ public class Rdiff
                 int len = in.read(strong);
                 if (len < strongSumLength)
                     break;
-                sigs.add(new ChecksumPair(weak, strong, off));
+
+                sigs.add(new ChecksumLocation(new ChecksumPair(weak, strong), off));
                 off += blockLength;
             } catch (EOFException eof)
             {
@@ -754,7 +757,7 @@ public class Rdiff
         return sigs;
     }
 
-    public void makeDeltas(List<ChecksumPair> sums, InputStream in, final OutputStream out)
+    public void makeDeltas(List<ChecksumLocation> sums, InputStream in, final OutputStream out)
             throws IOException, NoSuchAlgorithmException
     {
         Configuration.Builder builder = Configuration.Builder.create();
@@ -838,7 +841,7 @@ public class Rdiff
      * @throws java.io.IOException If reading fails.
      */
     public List<Delta>
-    makeDeltas(List<ChecksumPair> sums, InputStream in)
+    makeDeltas(List<ChecksumLocation> sums, InputStream in)
             throws IOException, NoSuchAlgorithmException
     {
         Configuration.Builder builder = Configuration.Builder.create();

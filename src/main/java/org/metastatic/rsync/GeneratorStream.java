@@ -70,6 +70,8 @@ public class GeneratorStream
      */
     protected long count;
 
+    protected int seq;
+
     // Constructor.
     // -----------------------------------------------------------------------
 
@@ -115,6 +117,7 @@ public class GeneratorStream
     {
         ndx = 0;
         count = 0L;
+        seq = 0;
     }
 
     /**
@@ -128,7 +131,7 @@ public class GeneratorStream
         buffer[ndx++] = b;
         if (ndx == buffer.length)
         {
-            ChecksumPair p = generateSum(buffer, 0, buffer.length);
+            ChecksumLocation p = generateSum(buffer, 0, buffer.length);
             for (GeneratorListener listener : listeners)
             {
                 try
@@ -172,7 +175,7 @@ public class GeneratorStream
             ndx += l;
             if (ndx == buffer.length)
             {
-                ChecksumPair p = generateSum(buffer, 0, buffer.length);
+                ChecksumLocation p = generateSum(buffer, 0, buffer.length);
                 for (GeneratorListener listener : listeners)
                 {
                     try
@@ -217,7 +220,7 @@ public class GeneratorStream
         ListenerException exception = null, current = null;
         if (ndx > 0)
         {
-            ChecksumPair p = generateSum(buffer, 0, ndx);
+            ChecksumLocation p = generateSum(buffer, 0, ndx);
             for (GeneratorListener listener : listeners)
             {
                 try
@@ -253,22 +256,20 @@ public class GeneratorStream
      * @param len How many bytes to checksum.
      * @return A {@link ChecksumPair} for this byte array.
      */
-    protected ChecksumPair generateSum(byte[] buf, int off, int len)
+    protected ChecksumLocation generateSum(byte[] buf, int off, int len)
     {
-        ChecksumPair p = new ChecksumPair();
         config.weakSum.check(buf, off, len);
         if (config.checksumSeed != null && config.isSeedPrefix)
             config.strongSum.update(config.checksumSeed);
         config.strongSum.update(buf, off, len);
         if (config.checksumSeed != null && !config.isSeedPrefix)
             config.strongSum.update(config.checksumSeed);
-        p.weak = config.weakSum.getValue();
-        p.strong = new byte[config.strongSumLength];
-        System.arraycopy(config.strongSum.digest(), 0, p.strong, 0,
-                config.strongSumLength);
-        p.offset = count;
-        p.length = len;
+        int weak = config.weakSum.getValue();
+        byte[] strong = new byte[config.strongSumLength];
+        System.arraycopy(config.strongSum.digest(), 0, strong, 0, config.strongSumLength);
+        ChecksumLocation loc = new ChecksumLocation(new ChecksumPair(weak, strong), count, len, seq);
         count += len;
-        return p;
+        seq++;
+        return loc;
     }
 }

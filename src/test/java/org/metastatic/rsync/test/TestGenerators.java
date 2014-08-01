@@ -47,8 +47,8 @@ public class TestGenerators
         for (int i = 0; i < corpus.length; i++)
             corpus[i] = (byte) i;
 
-        final List<ChecksumPair> fromOnes = new ArrayList<ChecksumPair>();
-        final List<ChecksumPair> fromFives = new ArrayList<ChecksumPair>();
+        final List<ChecksumLocation> fromOnes = new ArrayList<ChecksumLocation>();
+        final List<ChecksumLocation> fromFives = new ArrayList<ChecksumLocation>();
 
         GeneratorStream byOnes = new GeneratorStream(config);
         byOnes.addListener(new GeneratorListener()
@@ -56,7 +56,7 @@ public class TestGenerators
             @Override
             public void update(GeneratorEvent event) throws ListenerException
             {
-                fromOnes.add(event.getChecksumPair());
+                fromOnes.add(event.getChecksumLocation());
             }
         });
         GeneratorStream byFives = new GeneratorStream(config);
@@ -65,7 +65,7 @@ public class TestGenerators
             @Override
             public void update(GeneratorEvent event) throws ListenerException
             {
-                fromFives.add(event.getChecksumPair());
+                fromFives.add(event.getChecksumLocation());
             }
         });
 
@@ -76,7 +76,7 @@ public class TestGenerators
             byFives.update(corpus, i, Math.min(5, corpus.length - i));
         byFives.doFinal();
 
-        List<ChecksumPair> atOnce = new Generator(config).generateSums(corpus);
+        List<ChecksumLocation> atOnce = new Generator(config).generateSums(corpus);
 
         Assert.assertEquals(fromOnes, fromFives);
         Assert.assertEquals(fromFives, atOnce);

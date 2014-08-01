@@ -74,7 +74,7 @@ public final class Matcher {
     * @param buf  The data buffer to search.
     * @return A collection of {@link Delta}s derived from this search.
     */
-   public List<Delta> hashSearch(List<ChecksumPair> sums, byte[] buf) {
+   public List<Delta> hashSearch(List<ChecksumLocation> sums, byte[] buf) {
       return hashSearch(sums, buf, 0, buf.length);
    }
 
@@ -87,7 +87,8 @@ public final class Matcher {
     * @param len  The number of bytes to search from <code>buf</code>.
     * @return A collection of {@link Delta}s derived from this search.
     */
-   public List<Delta> hashSearch(List<ChecksumPair> sums, byte[] buf, int off, int len) {
+   public List<Delta> hashSearch(List<ChecksumLocation> sums, byte[] buf, int off, int len)
+   {
       deltas.clear();
       matcher.reset();
       matcher.setChecksums(sums);
@@ -107,7 +108,7 @@ public final class Matcher {
     * @return A list of deltas derived from this search.
     * @throws IOException If <i>filename</i> cannot be read.
     */
-   public List<Delta> hashSearch(List<ChecksumPair> sums, String filename) throws IOException {
+   public List<Delta> hashSearch(List<ChecksumLocation> sums, String filename) throws IOException {
       return hashSearch(sums, new FileInputStream(filename));
    }
 
@@ -119,7 +120,7 @@ public final class Matcher {
     * @return A list of {@link Delta}s derived from this search.
     * @throws IOException If <i>f</i> cannot be read.
     */
-   public List<Delta> hashSearch(List<ChecksumPair> sums, File f) throws IOException {
+   public List<Delta> hashSearch(List<ChecksumLocation> sums, File f) throws IOException {
       return hashSearch(sums, new FileInputStream(f));
    }
 
@@ -131,7 +132,7 @@ public final class Matcher {
     * @return A collection of {@link Delta}s derived from this search.
     * @throws IOException If an exception occurs while reading.
     */
-   public List<Delta> hashSearch(List<ChecksumPair> sums, InputStream in) throws IOException {
+   public List<Delta> hashSearch(List<ChecksumLocation> sums, InputStream in) throws IOException {
       deltas.clear();
       matcher.reset();
       matcher.setChecksums(sums);

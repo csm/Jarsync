@@ -68,7 +68,7 @@ public class Generator
      * generated from the array.
      * @see #generateSums(byte[], int, int, long)
      */
-    public List<ChecksumPair> generateSums(byte[] buf)
+    public List<ChecksumLocation> generateSums(byte[] buf)
     {
         return generateSums(buf, 0, buf.length, 0);
     }
@@ -84,7 +84,7 @@ public class Generator
      * generated from the array.
      * @see #generateSums(byte[], int, int, long)
      */
-    public List<ChecksumPair> generateSums(byte[] buf, int off, int len)
+    public List<ChecksumLocation> generateSums(byte[] buf, int off, int len)
     {
         return generateSums(buf, off, len, 0);
     }
@@ -100,7 +100,7 @@ public class Generator
      * generated from the array.
      * @see #generateSums(byte[], int, int, long)
      */
-    public List<ChecksumPair> generateSums(byte[] buf, long baseOffset)
+    public List<ChecksumLocation> generateSums(byte[] buf, long baseOffset)
     {
         return generateSums(buf, 0, buf.length, baseOffset);
     }
@@ -118,20 +118,19 @@ public class Generator
      * @return A {@link java.util.List} of {@link ChecksumPair}s
      * generated from the array.
      */
-    public List<ChecksumPair> generateSums(byte[] buf, int off, int len, long baseOffset)
+    public List<ChecksumLocation> generateSums(byte[] buf, int off, int len, long baseOffset)
     {
         int count = (len + (config.blockLength - 1)) / config.blockLength;
         int remainder = len % config.blockLength;
         int offset = off;
-        List<ChecksumPair> sums = new ArrayList<ChecksumPair>(count);
+        List<ChecksumLocation> sums = new ArrayList<ChecksumLocation>(count);
 
         for (int i = 0; i < count; i++)
         {
             int n = Math.min(len, config.blockLength);
-            ChecksumPair pair = generateSum(buf, offset, n, offset + baseOffset);
-            pair.seq = i;
+            ChecksumLocation location = generateSum(buf, offset, n, offset + baseOffset, i);
 
-            sums.add(pair);
+            sums.add(location);
             len -= n;
             offset += n;
         }
@@ -143,17 +142,17 @@ public class Generator
      * Generate checksums for an entire file.
      *
      * @param f The {@link java.io.File} to checksum.
-     * @return A {@link java.util.List} of {@link ChecksumPair}s
+     * @return A {@link java.util.List} of {@link org.metastatic.rsync.ChecksumLocation}s
      * generated from the file.
      * @throws java.io.IOException if <code>f</code> cannot be read from.
      */
-    public List<ChecksumPair> generateSums(File f) throws IOException
+    public List<ChecksumLocation> generateSums(File f) throws IOException
     {
         long len = f.length();
         int count = (int) ((len + (config.blockLength + 1)) / config.blockLength);
         long offset = 0;
         FileInputStream fin = new FileInputStream(f);
-        List<ChecksumPair> sums = new ArrayList<ChecksumPair>(count);
+        List<ChecksumLocation> sums = new ArrayList<ChecksumLocation>(count);
         int n = (int) Math.min(len, config.blockLength);
         byte[] buf = new byte[n];
 
@@ -161,10 +160,9 @@ public class Generator
         {
             int l = fin.read(buf, 0, n);
             if (l == -1) break;
-            ChecksumPair pair = generateSum(buf, 0, Math.min(l, n), offset);
-            pair.seq = i;
+            ChecksumLocation location = generateSum(buf, 0, Math.min(l, n), offset, i);
 
-            sums.add(pair);
+            sums.add(location);
             len -= n;
             offset += n;
             n = (int) Math.min(len, config.blockLength);
@@ -178,13 +176,13 @@ public class Generator
      * Generate checksums for an InputStream.
      *
      * @param in The {@link java.io.InputStream} to checksum.
-     * @return A {@link java.util.List} of {@link ChecksumPair}s
+     * @return A {@link java.util.List} of {@link org.metastatic.rsync.ChecksumLocation}s
      * generated from the bytes read.
      * @throws java.io.IOException if reading fails.
      */
-    public List<ChecksumPair> generateSums(InputStream in) throws IOException
+    public List<ChecksumLocation> generateSums(InputStream in) throws IOException
     {
-        List<ChecksumPair> sums = null;
+        List<ChecksumLocation> sums = null;
         byte[] buf = new byte[config.blockLength * config.blockLength];
         long offset = 0;
         int len = 0;
@@ -210,11 +208,16 @@ public class Generator
      * @param buf        The byte array to checksum.
      * @param fileOffset The offset in the original file from whence
      *                   this block came.
-     * @return A {@link ChecksumPair} for this byte array.
+     * @return A {@link org.metastatic.rsync.ChecksumLocation} for this byte array.
      */
-    public ChecksumPair generateSum(byte[] buf, long fileOffset)
+    public ChecksumLocation generateSum(byte[] buf, long fileOffset)
     {
         return generateSum(buf, 0, buf.length, fileOffset);
+    }
+
+    public ChecksumLocation generateSum(byte[] buf, int off, int len, long fileOffset)
+    {
+        return generateSum(buf, off, len, fileOffset, 0);
     }
 
     /**
@@ -224,23 +227,20 @@ public class Generator
      * @param off        Where in <code>buf</code> to start.
      * @param len        How many bytes to checksum.
      * @param fileOffset The original offset of this byte array.
-     * @return A {@link ChecksumPair} for this byte array.
+     * @param seq        The sequence number of this sum.
+     * @return A {@link org.metastatic.rsync.ChecksumLocation} for this byte array.
      */
-    public ChecksumPair
-    generateSum(byte[] buf, int off, int len, long fileOffset)
+    public ChecksumLocation generateSum(byte[] buf, int off, int len, long fileOffset, int seq)
     {
-        ChecksumPair p = new ChecksumPair();
         config.weakSum.check(buf, off, len);
         if (config.checksumSeed != null && config.isSeedPrefix)
             config.strongSum.update(config.checksumSeed);
         config.strongSum.update(buf, off, len);
         if (config.checksumSeed != null && !config.isSeedPrefix)
             config.strongSum.update(config.checksumSeed);
-        p.weak = config.weakSum.getValue();
-        p.strong = new byte[config.strongSumLength];
-        System.arraycopy(config.strongSum.digest(), 0, p.strong, 0, p.strong.length);
-        p.offset = fileOffset;
-        p.length = len;
-        return p;
+        int weak = config.weakSum.getValue();
+        byte[] strong = new byte[config.strongSumLength];
+        System.arraycopy(config.strongSum.digest(), 0, strong, 0, config.strongSumLength);
+        return new ChecksumLocation(new ChecksumPair(weak, strong), fileOffset, len, seq);
     }
 }

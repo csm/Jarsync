@@ -65,7 +65,7 @@ public class SyncTest
         byte[] text2 = out.toByteArray();
 
         long begin = System.nanoTime();
-        List<ChecksumPair> checksums = new Generator(conf).generateSums(text1);
+        List<ChecksumLocation> checksums = new Generator(conf).generateSums(text1);
         System.out.println("checksums: " + checksums);
         List<Delta> deltas = new Matcher(conf).hashSearch(checksums, text2);
         System.out.println("deltas: " + deltas);

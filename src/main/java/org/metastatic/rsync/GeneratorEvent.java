@@ -42,7 +42,7 @@ public class GeneratorEvent extends EventObject
      *
      * @param pair The checksum pair.
      */
-    public GeneratorEvent(ChecksumPair pair)
+    public GeneratorEvent(ChecksumLocation pair)
     {
         super(pair);
     }
@@ -55,8 +55,8 @@ public class GeneratorEvent extends EventObject
      *
      * @return The checksum pair.
      */
-    public ChecksumPair getChecksumPair()
+    public ChecksumLocation getChecksumLocation()
     {
-        return (ChecksumPair) source;
+        return (ChecksumLocation) source;
     }
 }

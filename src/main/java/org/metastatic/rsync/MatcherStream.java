@@ -133,14 +133,14 @@ public class MatcherStream
      *
      * @param sums The checksums.
      */
-    public void setChecksums(List<ChecksumPair> sums)
+    public void setChecksums(List<ChecksumLocation> sums)
     {
         hashtable.clear();
         if (sums != null)
         {
-            for (ChecksumPair p : sums)
+            for (ChecksumLocation p : sums)
             {
-                hashtable.put(p, p.getOffset());
+                hashtable.put(p.getChecksumPair(), p.getOffset());
             }
         }
     }
