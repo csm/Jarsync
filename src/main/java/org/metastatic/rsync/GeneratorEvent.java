@@ -40,11 +40,11 @@ public class GeneratorEvent extends EventObject
     /**
      * Create a new generator event.
      *
-     * @param pair The checksum pair.
+     * @param location The checksum location.
      */
-    public GeneratorEvent(ChecksumLocation pair)
+    public GeneratorEvent(ChecksumLocation location)
     {
-        super(pair);
+        super(location);
     }
 
     // Instance methods.

@@ -254,7 +254,7 @@ public class GeneratorStream
      * @param buf The byte array to checksum.
      * @param off Where in <code>buf</code> to start.
      * @param len How many bytes to checksum.
-     * @return A {@link ChecksumPair} for this byte array.
+     * @return A {@link org.metastatic.rsync.ChecksumLocation} for this byte array.
      */
     protected ChecksumLocation generateSum(byte[] buf, int off, int len)
     {

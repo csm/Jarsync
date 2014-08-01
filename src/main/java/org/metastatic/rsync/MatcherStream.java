@@ -36,12 +36,12 @@ import java.util.logging.Logger;
  * while whoever on the other end of the wire is waiting for our data.
  * With this construction, we can send {@link Delta}s as soon as they
  * are generated.
- * <p/>
+ *
  * <p>To implement the outgoing stream of Deltas, this class makes use
  * of a callback interface, {@link MatcherListener}. Pass a concrete
  * implementation of this interface to the {@link
  * #addListener(MatcherListener)} method, and a {@link java.util.List}
- * of {@link ChecksumPair}s before calling any of the
+ * of {@link org.metastatic.rsync.ChecksumLocation}s before calling any of the
  * <code>update</code> methods. Once the data have been passed to these
  * methods, call {@link #doFinal()} to finish the process.
  *

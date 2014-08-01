@@ -24,6 +24,10 @@ package org.metastatic.rsync;
 
 import com.google.common.base.Preconditions;
 
+/**
+ * A {@link org.metastatic.rsync.ChecksumPair} and information about the location
+ * that pair was generated over.
+ */
 public class ChecksumLocation
 {
     private final ChecksumPair checksumPair;
@@ -32,6 +36,14 @@ public class ChecksumLocation
     private final int length;
     private final int seq;
 
+    /**
+     * Create a checksum location.
+     *
+     * @param checksumPair The checksum pair.
+     * @param offset The offset of the data the checksums were computed over.
+     * @param length The length of the data.
+     * @param seq A sequence number for this location.
+     */
     public ChecksumLocation(ChecksumPair checksumPair, long offset, int length, int seq)
     {
         this.checksumPair = Preconditions.checkNotNull(checksumPair);
@@ -40,31 +52,64 @@ public class ChecksumLocation
         this.seq = seq;
     }
 
+    /**
+     * Create a checksum location. The sequence will default to zero.
+     *
+     * @param checksumPair The checksum pair.
+     * @param offset The offset of the data the checksums were computed over.
+     * @param length The length of the data.
+     */
     public ChecksumLocation(ChecksumPair checksumPair, long offset, int length)
     {
         this(checksumPair, offset, length, 0);
     }
 
+    /**
+     * Create a checksum location. The sequence and length will default to zero.
+     *
+     * @param checksumPair The checksum pair.
+     * @param offset The offset of the data the checksums were computed over.
+     */
     public ChecksumLocation(ChecksumPair checksumPair, long offset)
     {
         this(checksumPair, offset, 0, 0);
     }
 
+    /**
+     * Get the checksum pair.
+     *
+     * @return The checksum pair.
+     */
     public ChecksumPair getChecksumPair()
     {
         return checksumPair;
     }
 
+    /**
+     * Get the data offset.
+     *
+     * @return The offset.
+     */
     public long getOffset()
     {
         return offset;
     }
 
+    /**
+     * Get the data length.
+     *
+     * @return The length.
+     */
     public int getLength()
     {
         return length;
     }
 
+    /**
+     * Get the sequence number.
+     *
+     * @return The sequence number.
+     */
     public int getSeq()
     {
         return seq;

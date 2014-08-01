@@ -35,9 +35,9 @@ public interface GeneratorListener extends EventListener
 {
 
     /**
-     * Update with a single, new checksum pair.
+     * Update with a single, new checksum location.
      *
-     * @param event The event containing the next checksum pair.
+     * @param event The event containing the next checksum location.
      */
     void update(GeneratorEvent event) throws ListenerException;
 }
